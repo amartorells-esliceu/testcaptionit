@@ -1,0 +1,77 @@
+services:
+  db:
+    image: supabase/postgres:17.6.1.096
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-reallyreallyreallyreallyverysafe}
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_SERVER: db
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-postgres@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-postgres}
+    ports:
+      - 8083:80
+    depends_on:
+      db:
+        condition: service_healthy
+
+  postgrest:
+    image: postgrest/postgrest
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
+      PGRST_DB_SCHEMAS: "public, basic_auth"
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET:-reallyreallyreallyreallyverysafe}
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET:-reallyreallyreallyreallyverysafe}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-3600}
+      PGRST_SERVER_HOST: 0.0.0.0
+    ports:
+      - 3000:3000
+    command: ["postgrest"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  swagger:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8084:8080"
+    environment:
+      API_URL: http://postgrest:3000/
+      
+  sse:
+    build:
+      context: ./sse-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      PGHOST: db
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-postgres}
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      PG_CHANNEL: messages_changes
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  data:
