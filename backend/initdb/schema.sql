@@ -26,8 +26,8 @@ CREATE TABLE party (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
     id_room INT, 
     id_modality INT,
-    FOREIGN KEY(id_modality) REFERENCES modality(id),
-    FOREIGN KEY(id_room) REFERENCES room(id)
+    FOREIGN KEY(id_modality) REFERENCES modality(id) ON DELETE RESTRICT,
+    FOREIGN KEY(id_room) REFERENCES room(id) ON DELETE CASCADE
 );
 
 CREATE TABLE round (
@@ -37,4 +37,19 @@ CREATE TABLE round (
     FOREIGN KEY(id_party) REFERENCES party(id) ON DELETE CASCADE
 );
 
+CREATE TABLE answer (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    content VARCHAR(255) NOT NULL,
+    id_round INT,
+    id_user INT,
+    FOREIGN KEY(id_user) REFERENCES user(id),
+    FOREIGN KEY(id_round) REFERENCES round(id) ON DELETE CASCADE
+);
 
+CREATE TABLE votes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_answer INT,
+    id_user INT,
+    FOREIGN KEY(id_answer) REFERENCES answer(id) ON DELETE CASCADE,
+    FOREIGN KEY(id_user) REFERENCES user(id) 
+);
