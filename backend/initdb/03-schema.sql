@@ -8,15 +8,9 @@ CREATE TABLE users (
     username VARCHAR(32) NOT NULL,
     token VARCHAR(255) NOT NULL UNIQUE,
     is_host BOOLEAN DEFAULT FALSE,
-    room_id INT REFERENCES rooms(id) ON DELETE SET NULL
-);
-
-CREATE TABLE participants (
-    id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
     room_id INT REFERENCES rooms(id) ON DELETE CASCADE,
     points INT NOT NULL DEFAULT 0,
-    UNIQUE(user_id, room_id)
+    UNIQUE (username, room_id)
 );
 
 CREATE TABLE modalities (
