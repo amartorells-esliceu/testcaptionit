@@ -1,55 +1,65 @@
-CREATE TABLE room (
+CREATE TABLE rooms (
     id INT AUTO_INCREMENT PRIMARY KEY,
     code CHAR(8) NOT NULL UNIQUE
 );
 
-CREATE TABLE user (
+CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(32) NOT NULL,
     token VARCHAR(255) NOT NULL UNIQUE,
-    points INT NOT NULL,
     is_host BOOLEAN DEFAULT FALSE,
-    id_room INT, 
-    FOREIGN KEY(id_room) REFERENCES room(id) ON DELETE CASCADE
+    room_id INT, 
+    FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE SET NULL
 );
 
-CREATE TABLE modality (
+CREATE TABLE participants (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    room_id INT,
+    points INT NOT NULL DEFAULT 0,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE CASCADE,
+    UNIQUE(user_id, room_id)
+);
+
+CREATE TABLE modalities (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category VARCHAR(20) NOT NULL CHECK ( category IN ("Image", "Phrase"))
 );
 
-CREATE TABLE party (
+CREATE TABLE parties (
     id INT AUTO_INCREMENT PRIMARY KEY,
     num_rounds TINYINT NOT NULL DEFAULT 3,
     max_players TINYINT NOT NULL DEFAULT 8,
     round_time SMALLINT NOT NULL DEFAULT 60,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
-    id_room INT, 
-    id_modality INT,
-    FOREIGN KEY(id_modality) REFERENCES modality(id) ON DELETE RESTRICT,
-    FOREIGN KEY(id_room) REFERENCES room(id) ON DELETE CASCADE
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+    room_id INT,
+    modality_id INT,
+    FOREIGN KEY(modality_id) REFERENCES modalities(id) ON DELETE RESTRICT,
+    FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
-CREATE TABLE round (
+CREATE TABLE rounds (
     id INT AUTO_INCREMENT PRIMARY KEY,
     content VARCHAR(255) NOT NULL,
-    id_party INT,
-    FOREIGN KEY(id_party) REFERENCES party(id) ON DELETE CASCADE
+    party_id INT,
+    FOREIGN KEY(party_id) REFERENCES parties(id) ON DELETE CASCADE
 );
 
-CREATE TABLE answer (
+CREATE TABLE answers (
     id INT AUTO_INCREMENT PRIMARY KEY,
     content VARCHAR(255) NOT NULL,
-    id_round INT,
-    id_user INT,
-    FOREIGN KEY(id_user) REFERENCES user(id),
-    FOREIGN KEY(id_round) REFERENCES round(id) ON DELETE CASCADE
+    round_id INT,
+    user_id INT,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(round_id) REFERENCES rounds(id) ON DELETE CASCADE
 );
 
 CREATE TABLE votes (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    id_answer INT,
-    id_user INT,
-    FOREIGN KEY(id_answer) REFERENCES answer(id) ON DELETE CASCADE,
-    FOREIGN KEY(id_user) REFERENCES user(id) 
+    answer_id INT,
+    user_id INT,
+    FOREIGN KEY(answer_id) REFERENCES answers(id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (answer_id, user_id) 
 );
