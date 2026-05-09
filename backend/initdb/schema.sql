@@ -63,3 +63,5 @@ CREATE TABLE votes (
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE (answer_id, user_id) 
 );
+
+INSERT INTO modalities (category) VALUES ('Image'), ('Phrase');
