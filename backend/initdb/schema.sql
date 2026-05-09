@@ -39,9 +39,16 @@ CREATE TABLE parties (
     FOREIGN KEY(room_id) REFERENCES rooms(id) ON DELETE CASCADE
 );
 
+CREATE TABLE templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    content TEXT NOT NULL,
+    modality_id INT,
+    FOREIGN KEY (modality_id) REFERENCES modalities(id) ON DELETE CASCADE
+);
+
 CREATE TABLE rounds (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    content VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
     party_id INT,
     FOREIGN KEY(party_id) REFERENCES parties(id) ON DELETE CASCADE
 );
