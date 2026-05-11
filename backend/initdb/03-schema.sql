@@ -10,6 +10,7 @@ CREATE TABLE users (
     is_host BOOLEAN DEFAULT FALSE,
     room_id INT REFERENCES rooms(id) ON DELETE CASCADE,
     points INT NOT NULL DEFAULT 0,
+    last_activity TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE (username, room_id)
 );
 
