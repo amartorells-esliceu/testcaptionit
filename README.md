@@ -141,6 +141,7 @@ erDiagram
         int user_id FK
     }
 ```
+---
 
 ## Functional Requirements
 
