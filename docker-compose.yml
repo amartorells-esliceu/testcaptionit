@@ -6,8 +6,8 @@ services:
       - 5432:5432
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      JWT_SECRET: ${JWT_SECRET:-reallyreallyreallyreallyverysafe}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-captionit@1234}
+      JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
     volumes:
       - data:/var/lib/postgresql/data
       - ./backend/initdb:/docker-entrypoint-initdb.d
@@ -23,7 +23,7 @@ services:
     environment:
       PGADMIN_DEFAULT_SERVER: db
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-postgres@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-postgres}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-captionit@1234}
     ports:
       - 8083:80
     depends_on:
@@ -34,12 +34,12 @@ services:
     image: postgrest/postgrest
     restart: unless-stopped
     environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-captionit@1234}@db:5432/${POSTGRES_DB:-postgres}
       PGRST_DB_SCHEMAS: "public, basic_auth"
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ${JWT_SECRET:-reallyreallyreallyreallyverysafe}
-      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET:-reallyreallyreallyreallyverysafe}
-      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-3600}
+      PGRST_JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-86400}
       PGRST_SERVER_HOST: 0.0.0.0
     ports:
       - 3000:3000
@@ -67,7 +67,7 @@ services:
       PGPORT: 5432
       PGDATABASE: ${POSTGRES_DB:-postgres}
       PGUSER: postgres
-      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-captionit@1234}
       PG_CHANNEL: messages_changes
     depends_on:
       db:
