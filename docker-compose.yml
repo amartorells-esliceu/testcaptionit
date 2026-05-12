@@ -10,7 +10,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-reallyreallyreallyreallyverysafe}
     volumes:
       - data:/var/lib/postgresql/data
-      - ./initdb:/docker-entrypoint-initdb.d
+      - ./backend/initdb:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -57,7 +57,7 @@ services:
       
   sse:
     build:
-      context: ./sse-service
+      context: ./backend/sse-service
     restart: unless-stopped
     ports:
       - "3001:3001"
@@ -77,7 +77,7 @@ services:
     image: node:20
     working_dir: /app
     volumes:
-      - ../frontend:/app
+      - ./frontend:/app
     ports:
       - "5173:5173"
     command: sh -c "npm install && npm run dev -- --host"
