@@ -30,7 +30,6 @@ INSERT INTO templates (content, modality_id) VALUES
 ('https://api.memegen.link/images/ll.png', 1),
 ('https://api.memegen.link/images/morpheus.png', 1),
 ('https://api.memegen.link/images/older.png', 1),
-('https://api.memegen.link/images/rebecca.png', 1),
 ('https://api.memegen.link/images/saltbae.png', 1),
 ('https://api.memegen.link/images/sarcasticbear.png', 1),
 ('https://api.memegen.link/images/spiderman.png', 1),
