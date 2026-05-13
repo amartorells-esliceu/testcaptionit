@@ -1,10 +1,28 @@
-\set pgpass 'captionit@1234'
+DO $$ 
+BEGIN
+IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'postgres') THEN
+    CREATE ROLE postgres WITH LOGIN SUPERUSER PASSWORD 'postgres';
+ELSE
+    ALTER ROLE postgres WITH PASSWORD 'postgres';
+END IF;
+END $$;
 
-CREATE ROLE postgres WITH LOGIN PASSWORD :'pgpass';
-CREATE ROLE anon NOINHERIT;
-CREATE ROLE authenticator WITH LOGIN PASSWORD :'pgpass';
+CREATE SCHEMA IF NOT EXISTS api;
+CREATE SCHEMA IF NOT EXISTS basic_auth;
+
+DO $$ 
+BEGIN
+IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOINHERIT;
+END IF;
+IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'authenticator') THEN
+    CREATE ROLE authenticator WITH LOGIN PASSWORD 'captionit@1234';
+END IF;
+END $$;
+
 GRANT anon TO authenticator;
 
-GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public, api, basic_auth TO anon;
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon;
