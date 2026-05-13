@@ -65,3 +65,5 @@ BEGIN
     ORDER BY u.points DESC;
 END;
 $$ LANGUAGE plpgsql;
+
+GRANT EXECUTE ON FUNCTION get_ranking(INT) TO anon;

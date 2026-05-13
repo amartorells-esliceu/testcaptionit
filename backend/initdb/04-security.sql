@@ -1,29 +1,35 @@
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS votes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS modalities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS templates ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION auth_uid() RETURNS int AS $$
-  SELECT current_setting('app.settings.jwt_user_id', true)::int;
+  SELECT nullif(current_setting('request.jwt.claims', true)::json->>'id', '')::int;
 $$ LANGUAGE sql STABLE;
 
+DROP POLICY IF EXISTS user_ins ON users;
 CREATE POLICY user_ins ON users FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS user_sel ON users;
 CREATE POLICY user_sel ON users FOR SELECT USING (true);
+DROP POLICY IF EXISTS user_upd ON users;
 CREATE POLICY user_upd ON users FOR UPDATE USING (id = auth_uid());
 
+DROP POLICY IF EXISTS room_all ON rooms;
 CREATE POLICY room_all ON rooms FOR ALL USING (true);
-CREATE POLICY party_all ON parties FOR ALL USING (true);
 
+DROP POLICY IF EXISTS ans_ins ON answers;
 CREATE POLICY ans_ins ON answers FOR INSERT WITH CHECK (user_id = auth_uid());
-CREATE POLICY ans_sel ON answers FOR SELECT USING (
-    user_id = auth_uid() OR 
-    EXISTS (SELECT 1 FROM rounds WHERE id = round_id AND content IS NOT NULL)
-);
+DROP POLICY IF EXISTS ans_sel ON answers;
+CREATE POLICY ans_sel ON answers FOR SELECT USING (true);
 
-CREATE POLICY vote_ins ON votes FOR INSERT WITH CHECK (user_id = auth_uid());
-CREATE POLICY vote_sel ON votes FOR SELECT USING (true);
-
-ALTER TABLE modalities ENABLE ROW LEVEL SECURITY;
-ALTER TABLE templates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS mod_sel ON modalities;
 CREATE POLICY mod_sel ON modalities FOR SELECT USING (true);
+DROP POLICY IF EXISTS tem_sel ON templates;
 CREATE POLICY tem_sel ON templates FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS vote_ins ON votes;
+CREATE POLICY vote_ins ON votes FOR INSERT WITH CHECK (user_id = auth_uid());
+DROP POLICY IF EXISTS vote_sel ON votes;
+CREATE POLICY vote_sel ON votes FOR SELECT USING (true);
