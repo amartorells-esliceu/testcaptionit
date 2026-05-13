@@ -11,16 +11,6 @@ Before starting, ensure you have the following installed:
 * **Docker Compose** (v2.0 or higher)
 * **Git**
 
-### Environment Variables
-
-The project uses pre-configured default values, so it works out of the box. 
-
-If you need to customize the configuration:
-1. Copy the provided example file: `cp .env.example .env`
-2. Open `.env` and modify the values as needed.
-
-*Note: The `.env` file is ignored by git to keep your local credentials secure.*
-
 ### Commands to Start
 
 Follow these steps to spin up the entire ecosystem. The project is designed to work out of the box without manual configuration.
@@ -32,14 +22,11 @@ git clone https://github.com/jllinass/CaptionIt.git
 cd CaptionIt
 ```
 
-
-2. **Configure Environment Variables (Optional)** The system uses pre-defined defaults. If you wish to customize passwords or keys, create a .env file from the template:
+2. **Configure Environment Variables (Recommended)** Create a .env file from the template before starting to ensure consistent credentials, or skip this step to use the defaults in docker-compose.yml. Edit this file only if you need to override database or JWT values; it is gitignored for local security:
 
 ```
 cp .env.example .env
 ```
-
-If you skip this step, the project will use the default credentials defined in docker-compose.yml.
 
 3. **Launch with Docker** Build and start all services (Database, PostgREST, SSE, and Frontend):
 
@@ -59,18 +46,20 @@ Once the services are up and running, you can access them at the following addre
 
 | Service | URL | Description |
 | :--- | :--- | :--- |
-| **Frontend (App)** | [http://localhost:5173](http://localhost:5173) | The main game interface (Vite + React). |
+| **Frontend (App)** | [http://localhost:5173](http://localhost:5173) | The main game interface (Vite frontend with static HTML). |
 | **API REST** | [http://localhost:3000](http://localhost:3000) | PostgREST interface to the database. |
 | **SSE Service** | [http://localhost:3001](http://localhost:3001) | Real-time events service (Server-Sent Events). |
 | **API Docs** | [http://localhost:8084](http://localhost:8084) | Swagger UI to explore and test the API. |
-| **pgAdmin** | [http://localhost:8083](http://localhost:8083) | Database management (User: `postgres@example.com`). |
+| **pgAdmin** | [http://localhost:8083](http://localhost:8083) | Database management (User: `postgres@example.com`, Password: `postgres`). |
 
 ---
 
 ### 🔑 Default Credentials
 If you haven't changed the `.env` file, use these credentials to log in:
 * **pgAdmin User:** `postgres@example.com`
-* **pgAdmin/DB Password:** `captionit@1234`
+* **pgAdmin Password:** `postgres`
+* **PostgreSQL role:** `postgres`
+* **PostgreSQL password:** `postgres`
 
 ## Relational Model Diagram
 

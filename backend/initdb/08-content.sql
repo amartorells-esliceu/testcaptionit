@@ -42,13 +42,13 @@ INSERT INTO templates (content, modality_id) VALUES
 ('https://api.memegen.link/images/gandalf.png', 1),
 ('https://api.memegen.link/images/jetpack.png', 1),
 ('https://api.memegen.link/images/sad-obama.png', 1),
-('https://api.memegen.link/images/yuno.png', 1);
+('https://api.memegen.link/images/yuno.png', 1),
 ('https://api.memegen.link/images/wonka.png', 1),
 ('https://api.memegen.link/images/blb.png', 1),
 ('https://api.memegen.link/images/patrick.png', 1),
 ('https://api.memegen.link/images/fwp.png', 1),
 ('https://api.memegen.link/images/keanu.png', 1),
-('https://api.memegen.link/images/stew.png', 1),
+('https://api.memegen.link/images/stew.png', 1);
 
 -- FRASES PER COMPLETAR (modality_id = 2)
 INSERT INTO templates (content, modality_id) VALUES 

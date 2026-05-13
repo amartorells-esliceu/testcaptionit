@@ -16,7 +16,7 @@ services:
       interval: 5s     
       timeout: 5s       
       retries: 10       
-      start_period: 10s
+      start_period: 20s
 
   pgadmin:
     image: dpage/pgadmin4
@@ -24,7 +24,7 @@ services:
     environment:
       PGADMIN_DEFAULT_SERVER: db
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-postgres@example.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-captionit@1234}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-postgres}
     ports:
       - 8083:80
     depends_on:
@@ -54,8 +54,8 @@ services:
     ports:
       - "8084:8080"
     environment:
-      API_URL: http://postgrest:3000/
-      
+      - API_URL=http://localhost:3000/
+
   sse:
     build:
       context: ./backend/sse-service

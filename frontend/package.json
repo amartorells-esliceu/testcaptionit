@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "npm@10",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "build": "vite build",
     "dev": "vite",
@@ -15,7 +19,7 @@
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
     "prettier": "^3.8.1",
-    "vite": "^7.3.1"
+    "vite": "^6.0.0"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
