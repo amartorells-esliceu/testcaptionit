@@ -38,9 +38,7 @@ services:
       PGRST_DB_URI: postgres://authenticator:captionit%401234@db:5432/${POSTGRES_DB:-postgres}
       PGRST_DB_SCHEMAS: "public, basic_auth"
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
-      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
-      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY:-86400}
+      PGRST_JWT_SECRET: ""
       PGRST_SERVER_HOST: 0.0.0.0
     ports:
       - 3000:3000

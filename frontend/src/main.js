@@ -1,6 +1,7 @@
 const pathname = window.location.pathname;
 const isLoginPage = pathname === '/' || pathname === '/index.html';
 const isCreateJoinPage = pathname.includes('/createOrJoinRoom');
+const isConfigureRoomPage = pathname.includes('/configureRoom');
 
 if (isLoginPage) {
     const form = document.querySelector('form');
@@ -66,4 +67,123 @@ if (isCreateJoinPage) {
             window.location.replace(`/room/?code=${encodeURIComponent(roomCode)}`);
         });
     }
+}
+
+if (isConfigureRoomPage) {
+    const username = localStorage.getItem('username');
+    if (!username) {
+        window.location.replace('/');
+    }
+
+    const API_URL = 'http://localhost:3000';
+
+    async function loadModalities() {
+        try {
+            const response = await fetch(`${API_URL}/modalities`);
+            const modalities = await response.json();
+            const modalitySelect = document.querySelector('#modality');
+            
+            if (Array.isArray(modalities)) {
+                modalities.forEach(mod => {
+                    const option = document.createElement('option');
+                    option.value = mod.id;
+                    option.textContent = mod.category;
+                    modalitySelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading modalities:', error);
+            const messageEl = document.querySelector('#message');
+            messageEl.textContent = 'Error al carregar les modalitats.';
+        }
+    }
+
+    function generateRoomCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    }
+
+    const configForm = document.querySelector('#config-form');
+    const messageEl = document.querySelector('#message');
+
+    configForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const modality = document.querySelector('#modality').value;
+        const numRounds = parseInt(document.querySelector('#num-rounds').value);
+        const maxPlayers = parseInt(document.querySelector('#max-players').value);
+        const roundTime = parseInt(document.querySelector('#round-time').value);
+
+        if (!modality || !numRounds || !maxPlayers || !roundTime) {
+            messageEl.textContent = 'Completa tots els camps.';
+            return;
+        }
+
+        try {
+            messageEl.textContent = 'Creant sala...';
+            
+            const roomCode = generateRoomCode();
+
+            const roomResponse = await fetch(`${API_URL}/rooms`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: roomCode })
+            });
+
+            if (!roomResponse.ok) {
+                throw new Error('Error creating room');
+            }
+
+            let roomId = null;
+            const contentType = roomResponse.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                const responseText = await roomResponse.text();
+                if (responseText) {
+                    const room = JSON.parse(responseText);
+                    roomId = room[0].id;
+                }
+            }
+
+            if (!roomId) {
+                const roomFetch = await fetch(`${API_URL}/rooms?code=eq.${roomCode}`);
+                const rooms = await roomFetch.json();
+                roomId = rooms[0].id;
+            }
+
+            const partyResponse = await fetch(`${API_URL}/parties`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    num_rounds: numRounds,
+                    max_players: maxPlayers,
+                    round_time: roundTime,
+                    room_id: roomId,
+                    modality_id: parseInt(modality)
+                })
+            });
+
+            if (!partyResponse.ok) {
+                throw new Error('Error creating party');
+            }
+
+            const partyText = await partyResponse.text();
+            const party = partyText ? JSON.parse(partyText) : null;
+            const partyId = party ? party[0].id : null;
+            localStorage.setItem('roomCode', roomCode);
+            if (partyId) localStorage.setItem('partyId', partyId);
+            localStorage.setItem('roomId', roomId);
+
+            window.location.replace(`/room/?code=${encodeURIComponent(roomCode)}`);
+        } catch (error) {
+            console.error('Error creating room:', error);
+            messageEl.textContent = 'Error al crear la sala. Intenta de nou.';
+        }
+    });
+
+    loadModalities();
 }
