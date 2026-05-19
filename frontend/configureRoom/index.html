@@ -7,59 +7,82 @@
     <link rel="stylesheet" href="../src/input.css">
     <title>CaptionIt</title>
   </head>
-  <body class="bg-gradient-to-b from-purple-900 to-indigo-900 min-h-screen flex items-center justify-center p-4">
-    <div class="config-container bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full">
-      <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Configurar Sala</h1>
-      <form id="config-form" class="space-y-6">
-        <div class="config-group">
-          <label for="modality" class="block text-lg font-semibold text-gray-700 mb-2">Opció: Modalitat</label>
-          <select id="modality" name="modality" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 bg-white text-gray-800">
-            <option value="">Selecciona una modalitat</option>
-          </select>
-        </div>
+  <body class="relative min-h-screen bg-gradient-to-tr from-pink-300 via-pink-400 to-fuchsia-600 text-white font-sans antialiased">
+    
+    <a 
+      href="../createOrJoinRoom/index.html" 
+      class="absolute top-4 left-4 flex items-center gap-2 rounded-2xl border border-white/40 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-200 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 sm:top-6 sm:left-6"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-4 w-4">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+      </svg>
+      Tornar
+    </a>
 
-        <div class="config-group">
-          <label for="num-rounds" class="block text-lg font-semibold text-gray-700 mb-2">Opció: Nombre de Rondas</label>
-          <select id="num-rounds" name="num-rounds" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 bg-white text-gray-800">
-            <option value="">Selecciona nombre de rondas</option>
-            <option value="1">1 ronda</option>
-            <option value="2">2 rondas</option>
-            <option value="4">4 rondas</option>
-            <option value="6">6 rondas</option>
-            <option value="8">8 rondas</option>
-            <option value="10">10 rondas</option>
-            <option value="12">12 rondas</option>
-          </select>
-        </div>
+    <main class="mx-auto flex min-h-screen items-center justify-center px-4 py-10">
+      
+      <div class="w-full max-w-2xl rounded-[2rem] border border-white/30 bg-white/20 p-8 shadow-2xl backdrop-blur-md">
+        <h1 class="text-4xl font-bold text-center text-white mb-8 drop-shadow-sm">Configurar Sala</h1>
+        
+        <form id="config-form" class="space-y-6">
+          
+          <div class="config-group">
+            <label for="modality" class="block text-base font-semibold text-white/90 mb-2">Opció: Modalitat</label>
+            <select id="modality" name="modality" required class="w-full rounded-2xl border-0 bg-white/90 px-5 py-3.5 text-slate-800 shadow-inner outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-400/50">
+              <option value="" class="text-slate-400">Selecciona una modalitat</option>
+            </select>
+          </div>
 
-        <div class="config-group">
-          <label for="max-players" class="block text-lg font-semibold text-gray-700 mb-2">Opció: Nombre Màxim de Jugadors</label>
-          <select id="max-players" name="max-players" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 bg-white text-gray-800">
-            <option value="">Selecciona nombre maxim de jugadors</option>
-            <option value="2">2 jugadors</option>
-            <option value="4">4 jugadors</option>
-            <option value="6">6 jugadors</option>
-            <option value="8">8 jugadors</option>
-            <option value="10">10 jugadors</option>
-            <option value="12">12 jugadors</option>
-          </select>
-        </div>
+          <div class="config-group">
+            <label for="num-rounds" class="block text-base font-semibold text-white/90 mb-2">Opció: Nombre de Rondes</label>
+            <select id="num-rounds" name="num-rounds" required class="w-full rounded-2xl border-0 bg-white/90 px-5 py-3.5 text-slate-800 shadow-inner outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-400/50">
+              <option value="" class="text-slate-400">Selecciona nombre de rondes</option>
+              <option value="1">1 ronda</option>
+              <option value="2">2 rondes</option>
+              <option value="4">4 rondes</option>
+              <option value="6">6 rondes</option>
+              <option value="8">8 rondes</option>
+              <option value="10">10 rondes</option>
+              <option value="12">12 rondes</option>
+            </select>
+          </div>
 
-        <div class="config-group">
-          <label for="round-time" class="block text-lg font-semibold text-gray-700 mb-2">Opció: Temps de Ronda (segons)</label>
-          <select id="round-time" name="round-time" required class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 bg-white text-gray-800">
-            <option value="">Selecciona temps de ronda</option>
-            <option value="30">30 segons</option>
-            <option value="60">60 segons</option>
-            <option value="90">90 segons</option>
-            <option value="120">120 segons</option>
-          </select>
-        </div>
+          <div class="config-group">
+            <label for="max-players" class="block text-base font-semibold text-white/90 mb-2">Opció: Nombre Màxim de Jugadors</label>
+            <select id="max-players" name="max-players" required class="w-full rounded-2xl border-0 bg-white/90 px-5 py-3.5 text-slate-800 shadow-inner outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-400/50">
+              <option value="" class="text-slate-400">Selecciona nombre màxim de jugadors</option>
+              <option value="2">2 jugadors</option>
+              <option value="4">4 jugadors</option>
+              <option value="6">6 jugadors</option>
+              <option value="8">8 jugadors</option>
+              <option value="10">10 jugadors</option>
+              <option value="12">12 jugadors</option>
+            </select>
+          </div>
 
-        <div id="message" class="mt-4 p-4 text-center text-gray-700"></div>
-        <button type="submit" class="btn-create-room w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 mt-8">Crear Sala</button>
-      </form>
-    </div>
+          <div class="config-group">
+            <label for="round-time" class="block text-base font-semibold text-white/90 mb-2">Opció: Temps de Ronda (segons)</label>
+            <select id="round-time" name="round-time" required class="w-full rounded-2xl border-0 bg-white/90 px-5 py-3.5 text-slate-800 shadow-inner outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-400/50">
+              <option value="" class="text-slate-400">Selecciona temps de ronda</option>
+              <option value="30">30 segons</option>
+              <option value="60">60 segons</option>
+              <option value="90">90 segons</option>
+              <option value="120">120 segons</option>
+            </select>
+          </div>
+
+          <div id="message" class="mt-4 text-center text-sm font-medium text-amber-300 drop-shadow-sm"></div>
+          
+          <button 
+            type="submit" 
+            class="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40 active:translate-y-0 mt-8"
+          >
+            Crear Sala
+          </button>
+        </form>
+      </div>
+      
+    </main>
     <script type="module" src="../src/main.js"></script>
   </body>
 </html>
