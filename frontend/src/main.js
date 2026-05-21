@@ -77,27 +77,6 @@ if (isConfigureRoomPage) {
 
     const API_URL = 'http://localhost:3000';
 
-    async function loadModalities() {
-        try {
-            const response = await fetch(`${API_URL}/modalities`);
-            const modalities = await response.json();
-            const modalitySelect = document.querySelector('#modality');
-            
-            if (Array.isArray(modalities)) {
-                modalities.forEach(mod => {
-                    const option = document.createElement('option');
-                    option.value = mod.id;
-                    option.textContent = mod.category;
-                    modalitySelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Error loading modalities:', error);
-            const messageEl = document.querySelector('#message');
-            messageEl.textContent = 'Error al carregar les modalitats.';
-        }
-    }
-
     function generateRoomCode() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let code = '';
@@ -184,6 +163,4 @@ if (isConfigureRoomPage) {
             messageEl.textContent = 'Error al crear la sala. Intenta de nou.';
         }
     });
-
-    loadModalities();
 }
