@@ -5,12 +5,10 @@
         <link rel="icon" type="image/svg+xml" href="../public/vite.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="../src/input.css" />
-        <link rel="stylesheet" href="../src/style.css" />
         <title>CaptionIt</title>
     </head>
-    <body
-        class="min-h-screen bg-gradient-to-tr from-pink-300 via-pink-400 to-fuchsia-600"
-    >
+    <body class="min-h-screen bg-gradient-to-tr from-pink-300 via-pink-400 to-fuchsia-600">
+        
         <a
             href="../createOrJoinRoom/index.html"
             class="absolute top-4 left-4 flex items-center gap-2 rounded-2xl border border-white/40 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition duration-200 hover:bg-white/20 hover:-translate-y-0.5 active:translate-y-0 sm:top-6 sm:left-6"
@@ -32,35 +30,41 @@
             Abandonar sala
         </a>
 
-        <main
-            class="mx-auto flex min-h-screen items-center justify-center px-4 py-10"
-        >
-            <div
-                class="w-full max-w-2xl flex flex-col sm:flex-row rounded-[2rem] p-8 backdrop-blur-md"
-            >
+        <main class="mx-auto flex min-h-screen items-center justify-center px-4 py-10">
+            <div class="w-full max-w-2xl flex flex-col sm:flex-row rounded-[2rem] p-8 backdrop-blur-md gap-4">
                 <div class="bg-white/30 w-1/2 rounded-[1.5rem] shadow-lg">
                     <div class="max-w-md rounded-2 text-center m-3">
-                        <p class="text-lg font-semibold text-gray-800">
-                            Esperant jugadors
-                        </p>
-                        <p class="">2/10</p>
-                        <div>
-                            <p>Andreu</p>
+                        <div class="flex flex-row gap-2 items-center justify-center text-lg font-semibold text-gray-800">
+                            <p class="text-2xl">Esperant jugadors</p>
+                            <p class="text-2xl">2/10</p>
+                        </div>
+                        <div class="flex flex-col gap-2 items-center justify-center text-lg font-semibold text-gray-800 mt-4">
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
+                            <p>Nom de Exemple</p>
                         </div>
                     </div>
                 </div>
-                <div class="flex flex-col w-1/2">
+                <div class="flex flex-col w-1/2 text-center justify-center items-center">
                     <div class="bg-white/30 flex flex-row w-full rounded-[1.5rem] shadow-lg ml-2 justify-between items-center">
-                        <div class="bg-neutral-200/50 text-center w-2/3 h-1/2 text-center m-3 rounded-[0.5rem]">
-                            Codi
+                        <div class="w-2/3 h-1/2 m-3 rounded-[0.5rem] flex flex-col gap-2 items-center justify-center text-lg font-semibold text-gray-800">
+                            <p class="text-2xl">00000000</p>
                         </div>
                         <div class="items-center w-1/3 m-3">
                             <button class="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/40 active:translate-y-0">Copy</button>
                         </div>
                     </div>
                     <button class="w-full text-center mt-2 ml-2 rounded-2xl bg-gradient-to-r from-green-600 to-green-800 px-4 py-3.5 text-base font-semibold text-white shadow-lg shadow-green-700/30 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-green-500/40 active:translate-y-0">
-                        Start</div>
-                </button>
+                        Start
+                    </button>
+                </div>
             </div>
         </main>
         <script type="module" src="../src/main.js"></script>
