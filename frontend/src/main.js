@@ -2,6 +2,7 @@ const pathname = window.location.pathname;
 const isLoginPage = pathname === '/' || pathname === '/index.html';
 const isCreateJoinPage = pathname.includes('/createOrJoinRoom');
 const isConfigureRoomPage = pathname.includes('/configureRoom');
+const isRoomPage = pathname.includes('/room') || pathname.includes('espera');
 
 if (isLoginPage) {
     const form = document.querySelector('form');
@@ -163,4 +164,30 @@ if (isConfigureRoomPage) {
             messageEl.textContent = 'Error al crear la sala. Intenta de nou.';
         }
     });
+}
+
+if (isRoomPage) {
+    const coderoom = localStorage.getItem('roomCode');
+    if (coderoom) {
+        const codeElement = document.querySelector('#coderoom'); 
+        if (codeElement) {
+            codeElement.textContent = coderoom;
+        }
+    }
+
+const copyBtn = document.querySelector('#copycoderoom');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            const coderoom = localStorage.getItem('roomCode'); 
+            if (coderoom) {
+                navigator.clipboard.writeText(coderoom);
+                copyBtn.classList.add('bg-green-700', 'hover:bg-green-700', 'shadow-green-500/40');
+                copyBtn.classList.remove('from-blue-500', 'to-indigo-600', 'shadow-blue-500/30');
+                setTimeout(() => {
+                    copyBtn.classList.remove('bg-green-700', 'hover:bg-green-700', 'shadow-green-500/40');
+                    copyBtn.classList.add('from-blue-500', 'to-indigo-600', 'shadow-blue-500/30');
+                }, 750);
+            }
+        });
+    }
 }
