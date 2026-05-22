@@ -181,10 +181,10 @@ const copyBtn = document.querySelector('#copycoderoom');
             const coderoom = localStorage.getItem('roomCode'); 
             if (coderoom) {
                 navigator.clipboard.writeText(coderoom);
-                copyBtn.classList.add('bg-green-700', 'hover:bg-green-700', 'shadow-green-500/40');
+                copyBtn.classList.add('bg-blue-900', 'hover:bg-blue-700', 'shadow-green-500/40');
                 copyBtn.classList.remove('from-blue-500', 'to-indigo-600', 'shadow-blue-500/30');
                 setTimeout(() => {
-                    copyBtn.classList.remove('bg-green-700', 'hover:bg-green-700', 'shadow-green-500/40');
+                    copyBtn.classList.remove('bg-blue-900', 'hover:bg-blue-700', 'shadow-green-500/40');
                     copyBtn.classList.add('from-blue-500', 'to-indigo-600', 'shadow-blue-500/30');
                 }, 750);
             }
