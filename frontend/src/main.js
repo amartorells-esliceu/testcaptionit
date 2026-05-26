@@ -25,11 +25,27 @@ if (isCreateJoinPage) {
         document.querySelector('#join-section').classList.toggle('hidden');
     });
 
-    document.querySelector('#join-form').addEventListener('submit', (event) => {
+    document.querySelector('#join-form').addEventListener('submit', async (event) => {
         event.preventDefault();
         const roomCode = document.querySelector('#room-code').value.trim();
-        localStorage.setItem('roomCode', roomCode);
-        window.location.replace(`/room/?code=${roomCode}`);
+        const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
+        
+        if (rooms.length > 0) {
+            const token = Math.random().toString(36).substring(2);
+            await fetch(`${API_URL}/users`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: localStorage.getItem('username'),
+                    token: token,
+                    is_host: false,
+                    room_id: rooms[0].id
+                })
+            });
+            localStorage.setItem('roomCode', roomCode);
+            localStorage.setItem('roomId', rooms[0].id);
+            window.location.replace(`/room/?code=${roomCode}`);
+        }
     });
 }
 
@@ -65,6 +81,18 @@ if (isConfigureRoomPage) {
             })
         });
 
+        const token = Math.random().toString(36).substring(2);
+        await fetch(`${API_URL}/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: localStorage.getItem('username'),
+                token: token,
+                is_host: true,
+                room_id: roomId
+            })
+        });
+
         localStorage.setItem('roomCode', roomCode);
         localStorage.setItem('roomId', roomId);
         window.location.replace(`/room/?code=${roomCode}`);
@@ -90,6 +118,16 @@ if (isRoomPage) {
         if (party && party.length > 0) {
             document.querySelector('#number-of-players').textContent = `${users.length}/${party[0].max_players}`;
         }
+
+        const playerList = document.querySelector('#player-list');
+        playerList.innerHTML = '';
+
+        users.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'bg-white/20 px-4 py-3 rounded-xl text-white font-medium shadow-sm border border-white/10';
+            div.textContent = user.username;
+            playerList.appendChild(div);
+        });
     }
 
     updatePlayerCount();
