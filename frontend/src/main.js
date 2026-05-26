@@ -27,10 +27,28 @@ if (isCreateJoinPage) {
 
     document.querySelector('#join-form').addEventListener('submit', async (event) => {
         event.preventDefault();
-        const roomCode = document.querySelector('#room-code').value.trim();
+        const roomCode = document.querySelector('#room-code').value.trim().toUpperCase();
         const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
         
         if (rooms.length > 0) {
+            const roomId = rooms[0].id;
+
+            const users = await (await fetch(`${API_URL}/users?room_id=eq.${roomId}`)).json();
+            const party = await (await fetch(`${API_URL}/parties?room_id=eq.${roomId}`)).json();
+
+            if (party.length > 0 && users.length >= party[0].max_players) {
+                alert('La sala està plena. No hi pots entrar.');
+                return;
+            }
+
+            const currentUsername = localStorage.getItem('username');
+            const isNameTaken = users.some(u => u.username.toLowerCase() === currentUsername.toLowerCase());
+            
+            if (isNameTaken) {
+                alert('Aquest nom d’usuari ja està agafat en aquesta sala. Tria’n un altre.');
+                return;
+            }
+
             const token = Math.random().toString(36).substring(2);
             await fetch(`${API_URL}/users`, {
                 method: 'POST',
@@ -39,12 +57,14 @@ if (isCreateJoinPage) {
                     username: localStorage.getItem('username'),
                     token: token,
                     is_host: false,
-                    room_id: rooms[0].id
+                    room_id: roomId
                 })
             });
             localStorage.setItem('roomCode', roomCode);
-            localStorage.setItem('roomId', rooms[0].id);
+            localStorage.setItem('roomId', roomId);
             window.location.replace(`/room/?code=${roomCode}`);
+        } else {
+            alert('Aquest codi de sala no existeix. Revisa que estigui ben escrit.');
         }
     });
 }
@@ -117,6 +137,15 @@ if (isRoomPage) {
 
         if (party && party.length > 0) {
             document.querySelector('#number-of-players').textContent = `${users.length}/${party[0].max_players}`;
+        }
+
+        const me = users.find(u => u.username === localStorage.getItem('username'));
+        const playBtn = document.querySelector('button[type="button"] .fa-play').parentElement;
+
+        if (me && me.is_host) {
+            playBtn.classList.remove('hidden');
+        } else {
+            playBtn.classList.add('hidden');
         }
 
         const playerList = document.querySelector('#player-list');
