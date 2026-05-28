@@ -2,11 +2,11 @@ import express from "express";
 import { Client } from "pg";
 
 const PORT = process.env.PORT || 3001;
-const PG_HOST = process.env.PGHOST || "db"; 
+const PG_HOST = process.env.PGHOST || "db";
 const PG_PORT = process.env.PGPORT || 5432;
 const PG_DB = process.env.PGDATABASE || "postgres";
 const PG_USER = process.env.PGUSER || "postgres";
-const PG_PASSWORD = process.env.PGPASSWORD || "postgres";
+const PG_PASSWORD = process.env.PGPASSWORD || "captionit@1234";
 const PG_CHANNEL = process.env.PG_CHANNEL || "messages_changes";
 const KEEPALIVE_INTERVAL_MS = 25_000;
 
@@ -58,14 +58,14 @@ async function createListenerClient() {
       return;
     }
 
-    const eventName = payload.table; 
+    const eventName = payload.table;
     console.log(`Canvi detectat a la taula: ${eventName}`);
-    
-    broadcast(eventName, payload); 
+
+    broadcast(eventName, payload);
   });
 
   await pg.connect();
-  await pg.query(`LISTEN "${PG_CHANNEL}"`);
+  await pg.query(`LISTEN ${PG_CHANNEL}`);
   console.log(`listening on channel "${PG_CHANNEL}"`);
   return pg;
 }
@@ -91,13 +91,11 @@ async function reconnect() {
 
 const app = express();
 
-// CORS (El mantenim com el tenies tu, que ja funciona)
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   next();
 });
 
-// SSE endpoint
 app.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -120,7 +118,6 @@ app.get("/events", (req, res) => {
   });
 });
 
-// Health endpoint
 app.get("/health", (req, res) => {
   res.json({ status: "ok", clients: clients.size });
 });

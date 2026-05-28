@@ -37,7 +37,7 @@ if (isCreateJoinPage) {
             const party = await (await fetch(`${API_URL}/parties?room_id=eq.${roomId}`)).json();
 
             if (party.length > 0 && users.length >= party[0].max_players) {
-                alert('La sala està plena. No hi pots entrar.');
+                alert('La sala està plena. No hi pots entrant.');
                 return;
             }
 
@@ -127,11 +127,65 @@ if (isRoomPage) {
         navigator.clipboard.writeText(roomCode);
     });
 
+    const leaveBtn = document.querySelector('#leave-room-btn');
+    if (leaveBtn) {
+        leaveBtn.addEventListener('click', async (event) => {
+            event.preventDefault(); 
+            
+            try {
+                const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
+                if (!rooms || rooms.length === 0) {
+                    window.location.replace('/createOrJoinRoom/');
+                    return;
+                }
+                const roomId = rooms[0].id;
+
+                const users = await (await fetch(`${API_URL}/users?room_id=eq.${roomId}`)).json();
+                const me = users.find(u => u.username === localStorage.getItem('username'));
+
+                if (me) {
+                    if (users.length === 1) {
+                        await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
+                        await fetch(`${API_URL}/parties?room_id=eq.${roomId}`, { method: 'DELETE' });
+                        await fetch(`${API_URL}/rooms?id=eq.${roomId}`, { method: 'DELETE' });
+                    } 
+                    else if (me.is_host) {
+                        const nextHost = users.find(u => u.id !== me.id);
+                        if (nextHost) {
+                            await fetch(`${API_URL}/users?id=eq.${nextHost.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ is_host: true })
+                            });
+                        }
+                        await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
+                    } 
+                    else {
+                        await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
+                    }
+                }
+            } catch (error) {
+                console.error("Error al provar d'abandonar la sala:", error);
+            }
+
+            localStorage.removeItem('roomCode');
+            localStorage.removeItem('roomId');
+            window.location.replace('/createOrJoinRoom/');
+        });
+    }
+
     async function updatePlayerCount() {
         const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
-        if (!rooms || rooms.length === 0) return;
+        
+        if (!rooms || rooms.length === 0) {
+            alert('Aquesta sala ha estat eliminada pel host.');
+            localStorage.removeItem('roomCode');
+            localStorage.removeItem('roomId');
+            window.location.replace('/createOrJoinRoom/');
+            return;
+        }
+        
         const roomId = rooms[0].id;
-
         const users = await (await fetch(`${API_URL}/users?room_id=eq.${roomId}`)).json();
         const party = await (await fetch(`${API_URL}/parties?room_id=eq.${roomId}`)).json();
 
@@ -165,5 +219,21 @@ if (isRoomPage) {
     }
 
     updatePlayerCount();
-    setInterval(updatePlayerCount, 5000);
+
+    const eventSource = new EventSource('http://localhost:3001/events');
+
+    eventSource.addEventListener('users', (event) => {
+        updatePlayerCount();
+    });
+
+    eventSource.addEventListener('rooms', (event) => {
+        const payload = JSON.parse(event.data);
+        if (payload.action === 'DELETE') {
+            updatePlayerCount();
+        }
+    });
+
+    eventSource.onerror = () => {
+        console.warn('Connexió SSE perduda. Reconnectant...');
+    };
 }
