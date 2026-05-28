@@ -95,7 +95,7 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  // short-circuit preflight
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
@@ -130,7 +130,6 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", clients: clients.size });
 });
 
-// Allow broadcasting custom events to connected SSE clients.
 app.post('/broadcast', (req, res) => {
   const { event, data } = req.body || {};
   if (!event) {

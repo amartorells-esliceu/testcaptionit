@@ -226,7 +226,6 @@ if (isRoomPage) {
         updatePlayerCount();
     });
 
-    // When host starts the game, navigate all players in the same room to the round screen
     eventSource.addEventListener('start', (event) => {
         let payload;
         try {
@@ -235,7 +234,6 @@ if (isRoomPage) {
             payload = event.data;
         }
 
-        // payload may contain roomId or roomCode
         const targetRoomId = payload && (payload.roomId || (payload.data && payload.data.room_id));
         const targetRoomCode = payload && (payload.roomCode || (payload.data && payload.data.room_code));
 
@@ -259,7 +257,6 @@ if (isRoomPage) {
     };
 }
 
-// Play button handler: only present on room page, emit start event to SSE service
 if (isRoomPage) {
     const playBtnGlobal = document.querySelector('#play-game-btn');
     if (playBtnGlobal) {
