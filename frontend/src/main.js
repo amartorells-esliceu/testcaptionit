@@ -153,8 +153,13 @@ if (isRoomPage) {
 
         users.forEach(user => {
             const div = document.createElement('div');
-            div.className = 'bg-white/20 px-4 py-3 rounded-xl text-white font-medium shadow-sm border border-white/10';
-            div.textContent = user.username;
+            div.className = 'flex items-center justify-between bg-white/20 px-4 py-3 rounded-xl text-white font-medium shadow-sm border border-white/10';
+            
+            div.innerHTML = `
+                <span>${user.username}</span>
+                ${user.is_host ? '<i class="fa-solid fa-crown text-yellow-400 text-lg drop-shadow-[0_2px_4px_rgba(234,179,8,0.3)]"></i>' : ''}
+            `;
+            
             playerList.appendChild(div);
         });
     }
