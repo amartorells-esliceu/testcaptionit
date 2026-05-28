@@ -96,6 +96,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(express.json());
+
 app.get("/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -120,6 +122,22 @@ app.get("/events", (req, res) => {
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", clients: clients.size });
+});
+
+// Allow broadcasting custom events to connected SSE clients.
+app.post('/broadcast', (req, res) => {
+  const { event, data } = req.body || {};
+  if (!event) {
+    return res.status(400).json({ error: 'missing event' });
+  }
+
+  try {
+    broadcast(event, data || {});
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('broadcast error', err);
+    return res.status(500).json({ error: 'broadcast failed' });
+  }
 });
 
 (async () => {

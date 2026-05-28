@@ -194,7 +194,7 @@ if (isRoomPage) {
         }
 
         const me = users.find(u => u.username === localStorage.getItem('username'));
-        const playBtn = document.querySelector('button[type="button"] .fa-play').parentElement;
+            const playBtn = document.querySelector('#play-game-btn');
 
         if (me && me.is_host) {
             playBtn.classList.remove('hidden');
@@ -226,6 +226,27 @@ if (isRoomPage) {
         updatePlayerCount();
     });
 
+    // When host starts the game, navigate all players in the same room to the round screen
+    eventSource.addEventListener('start', (event) => {
+        let payload;
+        try {
+            payload = JSON.parse(event.data);
+        } catch (err) {
+            payload = event.data;
+        }
+
+        // payload may contain roomId or roomCode
+        const targetRoomId = payload && (payload.roomId || (payload.data && payload.data.room_id));
+        const targetRoomCode = payload && (payload.roomCode || (payload.data && payload.data.room_code));
+
+        const currentRoomId = localStorage.getItem('roomId');
+        const currentRoomCode = localStorage.getItem('roomCode');
+
+        if (String(targetRoomId) === String(currentRoomId) || String(targetRoomCode) === String(currentRoomCode)) {
+            window.location.replace(`/round/?code=${currentRoomCode}`);
+        }
+    });
+
     eventSource.addEventListener('rooms', (event) => {
         const payload = JSON.parse(event.data);
         if (payload.action === 'DELETE') {
@@ -236,4 +257,25 @@ if (isRoomPage) {
     eventSource.onerror = () => {
         console.warn('Connexió SSE perduda. Reconnectant...');
     };
+}
+
+// Play button handler: only present on room page, emit start event to SSE service
+if (isRoomPage) {
+    const playBtnGlobal = document.querySelector('#play-game-btn');
+    if (playBtnGlobal) {
+        playBtnGlobal.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const roomCode = localStorage.getItem('roomCode');
+            const roomId = localStorage.getItem('roomId');
+            try {
+                await fetch('http://localhost:3001/broadcast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event: 'start', data: { roomId: roomId, roomCode: roomCode } })
+                });
+            } catch (err) {
+                console.error('Error broadcasting start event:', err);
+            }
+        });
+    }
 }
