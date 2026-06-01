@@ -3,6 +3,7 @@ const isLoginPage = pathname === '/' || pathname === '/index.html';
 const isCreateJoinPage = pathname.includes('/createOrJoinRoom');
 const isConfigureRoomPage = pathname.includes('/configureRoom');
 const isRoomPage = pathname.includes('/room') || pathname.includes('espera');
+const isRoundPage = pathname.includes('/round');
 const API_URL = 'http://localhost:3000';
 
 if (isLoginPage) {
@@ -29,7 +30,7 @@ if (isCreateJoinPage) {
         event.preventDefault();
         const roomCode = document.querySelector('#room-code').value.trim().toUpperCase();
         const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
-        
+
         if (rooms.length > 0) {
             const roomId = rooms[0].id;
 
@@ -43,7 +44,7 @@ if (isCreateJoinPage) {
 
             const currentUsername = localStorage.getItem('username');
             const isNameTaken = users.some(u => u.username.toLowerCase() === currentUsername.toLowerCase());
-            
+
             if (isNameTaken) {
                 alert('Aquest nom d’usuari ja està agafat en aquesta sala. Tria’n un altre.');
                 return;
@@ -122,7 +123,7 @@ if (isConfigureRoomPage) {
 if (isRoomPage) {
     const roomCode = localStorage.getItem('roomCode');
     document.querySelector('#coderoom').textContent = roomCode;
-    
+
     document.querySelector('#copycoderoom').addEventListener('click', () => {
         navigator.clipboard.writeText(roomCode);
     });
@@ -130,8 +131,8 @@ if (isRoomPage) {
     const leaveBtn = document.querySelector('#leave-room-btn');
     if (leaveBtn) {
         leaveBtn.addEventListener('click', async (event) => {
-            event.preventDefault(); 
-            
+            event.preventDefault();
+
             try {
                 const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
                 if (!rooms || rooms.length === 0) {
@@ -148,7 +149,7 @@ if (isRoomPage) {
                         await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
                         await fetch(`${API_URL}/parties?room_id=eq.${roomId}`, { method: 'DELETE' });
                         await fetch(`${API_URL}/rooms?id=eq.${roomId}`, { method: 'DELETE' });
-                    } 
+                    }
                     else if (me.is_host) {
                         const nextHost = users.find(u => u.id !== me.id);
                         if (nextHost) {
@@ -159,7 +160,7 @@ if (isRoomPage) {
                             });
                         }
                         await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
-                    } 
+                    }
                     else {
                         await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
                     }
@@ -176,7 +177,7 @@ if (isRoomPage) {
 
     async function updatePlayerCount() {
         const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
-        
+
         if (!rooms || rooms.length === 0) {
             alert('Aquesta sala ha estat eliminada pel host.');
             localStorage.removeItem('roomCode');
@@ -184,7 +185,7 @@ if (isRoomPage) {
             window.location.replace('/createOrJoinRoom/');
             return;
         }
-        
+
         const roomId = rooms[0].id;
         const users = await (await fetch(`${API_URL}/users?room_id=eq.${roomId}`)).json();
         const party = await (await fetch(`${API_URL}/parties?room_id=eq.${roomId}`)).json();
@@ -194,7 +195,7 @@ if (isRoomPage) {
         }
 
         const me = users.find(u => u.username === localStorage.getItem('username'));
-            const playBtn = document.querySelector('#play-game-btn');
+        const playBtn = document.querySelector('#play-game-btn');
 
         if (me && me.is_host) {
             playBtn.classList.remove('hidden');
@@ -208,12 +209,12 @@ if (isRoomPage) {
         users.forEach(user => {
             const div = document.createElement('div');
             div.className = 'flex items-center justify-between bg-white/20 px-4 py-3 rounded-xl text-white font-medium shadow-sm border border-white/10';
-            
+
             div.innerHTML = `
                 <span>${user.username}</span>
                 ${user.is_host ? '<i class="fa-solid fa-crown text-yellow-400 text-lg drop-shadow-[0_2px_4px_rgba(234,179,8,0.3)]"></i>' : ''}
             `;
-            
+
             playerList.appendChild(div);
         });
     }
@@ -275,4 +276,41 @@ if (isRoomPage) {
             }
         });
     }
+}
+
+if (isRoundPage) {
+    function iniciarRonda() {
+        let tempsRestant = 3;
+
+        const pantallaComptador = document.getElementById('pantalla-comptador');
+        const contingutJoc = document.getElementById('contingut-joc');
+        const spanSegons = document.getElementById('segons');
+
+        pantallaComptador.classList.remove('hidden');
+        pantallaComptador.classList.add('flex');
+        contingutJoc.classList.replace('flex', 'hidden');
+
+        spanSegons.textContent = tempsRestant;
+
+        const interval = setInterval(() => {
+            tempsRestant--;
+
+            if (tempsRestant > 0) {
+                spanSegons.textContent = tempsRestant;
+            } else {
+                clearInterval(interval);
+
+                pantallaComptador.classList.replace('flex', 'hidden');
+                contingutJoc.classList.replace('hidden', 'flex');
+
+                començarJoc();
+            }
+        }, 1000);
+    }
+
+    function començarJoc() {
+
+    }
+
+    iniciarRonda();
 }

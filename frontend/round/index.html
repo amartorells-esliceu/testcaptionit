@@ -1,15 +1,42 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="../public/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="../src/input.css">
-    <link rel="stylesheet" href="../src/style.css">
-    <title>CaptionIt</title>
-  </head>
-  <body>
-    <h1>Round</h1>
-    <script type="module" src="../src/main.js"></script>
-  </body>
+<html lang="ca">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="../src/input.css">
+  <title>CaptionIt</title>
+</head>
+
+<body
+  class="relative min-h-screen bg-gradient-to-tr from-pink-300 via-pink-400 to-fuchsia-600 text-white text-center font-sans antialiased overflow-x-hidden">
+
+  <main class="relative z-10 mx-auto flex min-h-screen items-center justify-center px-4 py-10">
+
+    <div id="pantalla-comptador" class="w-full max-w-md rounded-[2rem] border border-white/30 bg-white/20 p-8 shadow-2xl backdrop-blur-md flex flex-col items-center justify-center">
+      <h1 class="mb-4 text-3xl font-bold tracking-tight text-white drop-shadow-sm">La ronda comença en:</h1>
+      <span id="segons" class="text-8xl font-black text-white drop-shadow-md animate-pulse">3</span>
+    </div>
+
+    <div id="contingut-joc" class="hidden w-full max-w-md rounded-[2rem] border border-white/30 bg-white/20 p-8 shadow-2xl backdrop-blur-md flex-col items-center justify-center">
+      <h1 class="text-4xl font-bold tracking-tight text-white drop-shadow-sm">Round 1</h1>
+    </div>
+
+  </main>
+
+  <footer class="absolute bottom-4 left-0 right-0 z-10 text-center pointer-events-none">
+    <p class="text-lg text-white/60 font-medium tracking-wide">
+      © 2026 CaptionIt
+    </p>
+  </footer>
+
+  <div
+    class="fixed bottom-0 right-0 z-0 w-72 md:w-96 opacity-25 translate-x-12 translate-y-12 pointer-events-none select-none">
+    <img src="/vite.svg" alt="CaptionIt Logo Background" class="w-full h-auto" />
+  </div>
+
+  <script type="module" src="../src/main.js"></script>
+</body>
+
 </html>
