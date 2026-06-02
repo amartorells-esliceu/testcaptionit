@@ -1,3 +1,5 @@
-- Començar a fer el joc.
+- FER PODIUM
 
-- Sistema de AFK
+- MILLORES VISUALS
+
+- MIRAR DE POSAR MES "COSES"

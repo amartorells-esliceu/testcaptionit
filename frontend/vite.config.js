@@ -32,7 +32,6 @@ export default defineConfig({
         configureRoom: resolve(__dirname, 'configureRoom/index.html'),
         createOrJoinRoom: resolve(__dirname, 'createOrJoinRoom/index.html'),
         answersVotes: resolve(__dirname, 'answersVotes/index.html'),
-        resetGame: resolve(__dirname, 'resetGame/index.html'),
       },
     },
   },

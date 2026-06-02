@@ -6,6 +6,7 @@
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="../src/input.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <title>CaptionIt</title>
 </head>
 
@@ -19,8 +20,29 @@
       <span id="segons" class="text-8xl font-black text-white drop-shadow-md animate-pulse">3</span>
     </div>
 
-    <div id="contingut-joc" class="hidden flex-col items-center justify-center">
-      <h1 class="text-4xl font-bold tracking-tight text-white drop-shadow-sm">Round 1</h1>
+    <div id="contingut-joc" class="hidden flex-col items-center justify-center w-full max-w-4xl">
+      <div class="text-center mb-8">
+        <h1 id="round-title" class="text-4xl font-bold tracking-tight text-white drop-shadow-sm mb-4">Ronda 1</h1>
+        <p class="text-xl text-white/80">Temps restant: <span id="timer">60</span>s</p>
+      </div>
+
+      <div id="round-content" class="bg-white/20 rounded-3xl p-8 mb-8 border border-white/30 backdrop-blur w-full flex items-center justify-center min-h-64">
+      </div>
+
+      <div class="w-full flex flex-col gap-4">
+        <textarea id="answer-input" placeholder="Escriu la teva resposta..." 
+          class="w-full p-4 rounded-2xl border-0 bg-white/90 text-slate-800 shadow-inner outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-400/50 resize-none h-24"></textarea>
+        <button id="submit-btn" type="button"
+          class="w-full rounded-2xl bg-gradient-to-r from-green-600 to-green-800 px-4 py-4 text-base font-semibold text-white shadow-lg shadow-green-700/30 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-green-500/40 active:translate-y-0">
+          <i class="fa-solid fa-paper-plane mr-2"></i>Enviar Resposta
+        </button>
+      </div>
+
+      <div class="mt-8">
+        <button id="leave-round-btn" class="rounded-2xl bg-gradient-to-r from-red-600 to-pink-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+          <i class="fa-solid fa-sign-out-alt mr-2"></i>Abandonar partida
+        </button>
+      </div>
     </div>
 
   </main>
