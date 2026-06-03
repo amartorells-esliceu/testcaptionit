@@ -1,104 +1,125 @@
-const pathname = window.location.pathname;
-const isLoginPage = pathname === '/' || pathname === '/index.html';
-const isCreateJoinPage = pathname.includes('/createOrJoinRoom');
-const isConfigureRoomPage = pathname.includes('/configureRoom');
-const isRoomPage = pathname.includes('/room') || pathname.includes('espera');
-const isRoundPage = pathname.includes('/round');
 const API_URL = 'http://localhost:3000';
+const SSE_URL = 'http://localhost:3001/events';
+let sseConnection = null;
 
-if (isLoginPage) {
-    document.querySelector('form').addEventListener('submit', (event) => {
-        event.preventDefault();
-        const username = document.querySelector('#username').value.trim();
-        localStorage.setItem('username', username);
+const fetchJSON = async (url, options) => await (await fetch(url, options)).json();
+const local = {
+    get: (key) => localStorage.getItem(key),
+    set: (key, val) => localStorage.setItem(key, val),
+    clearGame: () => ['currentRound', 'currentRoundId', 'totalRounds', 'currentPartyId', 'myUserId'].forEach(k => localStorage.removeItem(k)),
+    clearAll: () => ['roomCode', 'roomId', 'token'].forEach(k => localStorage.removeItem(k))
+};
+
+function getSSEConnection() {
+    if (!sseConnection || sseConnection.readyState === EventSource.CLOSED) {
+        sseConnection = new EventSource(SSE_URL);
+        sseConnection.onopen = () => console.log('SSE connected');
+        sseConnection.onerror = () => console.warn('SSE error');
+    }
+    return sseConnection;
+}
+
+async function assegurarMyUserId() {
+    let myId = parseInt(local.get('myUserId'), 10);
+    if (!myId || Number.isNaN(myId)) {
+        const token = local.get('token');
+        if (token) {
+            const users = await fetchJSON(`${API_URL}/users?token=eq.${token}`);
+            if (users[0]) {
+                myId = users[0].id;
+                local.set('myUserId', myId);
+            }
+        }
+    }
+    return myId;
+}
+
+async function abandonarSala() {
+    const roomId = local.get('roomId');
+    try {
+        const users = await fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`);
+        const me = users.find(u => u.token === local.get('token'));
+
+        if (me) {
+            if (users.length === 1) {
+                await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
+                await fetch(`${API_URL}/parties?room_id=eq.${roomId}`, { method: 'DELETE' });
+                await fetch(`${API_URL}/rooms?id=eq.${roomId}`, { method: 'DELETE' });
+            } else {
+                if (me.is_host) {
+                    const nextHost = users.find(u => u.id !== me.id);
+                    if (nextHost) await fetch(`${API_URL}/users?id=eq.${nextHost.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_host: true }) });
+                }
+                await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
+            }
+        }
+    } catch (e) { console.error("Error abandonant:", e); }
+    local.clearAll();
+    window.location.replace('/createOrJoinRoom/');
+}
+
+const path = window.location.pathname;
+
+if (path === '/' || path === '/index.html') {
+    document.querySelector('form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        local.set('username', document.querySelector('#username').value.trim());
         window.location.replace('/createOrJoinRoom/');
     });
 }
 
-if (isCreateJoinPage) {
-    document.querySelector('#welcome').textContent = `Hola, ${localStorage.getItem('username')}! Escull una sala per continuar.`;
+if (path.includes('/createOrJoinRoom')) {
+    document.querySelector('#welcome').textContent = `Hola, ${local.get('username')}! Escull una sala per continuar.`;
+    document.querySelector('#create-room-btn').addEventListener('click', () => window.location.replace('/configureRoom/'));
+    document.querySelector('#show-join-btn').addEventListener('click', () => document.querySelector('#join-section').classList.toggle('hidden'));
 
-    document.querySelector('#create-room-btn').addEventListener('click', () => {
-        window.location.replace('/configureRoom/');
-    });
-
-    document.querySelector('#show-join-btn').addEventListener('click', () => {
-        document.querySelector('#join-section').classList.toggle('hidden');
-    });
-
-    document.querySelector('#join-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
+    document.querySelector('#join-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
         const roomCode = document.querySelector('#room-code').value.trim().toUpperCase();
-        const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
+        const rooms = await fetchJSON(`${API_URL}/rooms?code=eq.${roomCode}`);
 
-        if (rooms.length > 0) {
-            const roomId = rooms[0].id;
+        if (rooms.length === 0) return alert('Aquest codi de sala no existeix.');
+        const roomId = rooms[0].id;
 
-            const users = await (await fetch(`${API_URL}/users?room_id=eq.${roomId}`)).json();
-            const party = await (await fetch(`${API_URL}/parties?room_id=eq.${roomId}`)).json();
+        const users = await fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`);
+        const party = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`);
 
-            if (party.length > 0 && users.length >= party[0].max_players) {
-                alert('La sala està plena. No hi pots entrant.');
-                return;
-            }
+        if (party.length > 0 && users.length >= party[0].max_players) return alert('La sala està plena.');
+        if (users.some(u => u.username.toLowerCase() === local.get('username').toLowerCase())) return alert('Nom d’usuari ja agafat.');
 
-            const currentUsername = localStorage.getItem('username');
-            const isNameTaken = users.some(u => u.username.toLowerCase() === currentUsername.toLowerCase());
+        const token = Math.random().toString(36).substring(2);
+        await fetch(`${API_URL}/users`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: local.get('username'), token, is_host: false, room_id: roomId })
+        });
 
-            if (isNameTaken) {
-                alert('Aquest nom d’usuari ja està agafat en aquesta sala. Tria’n un altre.');
-                return;
-            }
-
-            const token = Math.random().toString(36).substring(2);
-            await fetch(`${API_URL}/users`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: localStorage.getItem('username'),
-                    token: token,
-                    is_host: false,
-                    room_id: roomId
-                })
-            });
-            localStorage.setItem('roomCode', roomCode);
-            localStorage.setItem('roomId', roomId);
-            window.location.replace(`/room/?code=${roomCode}`);
-        } else {
-            alert('Aquest codi de sala no existeix. Revisa que estigui ben escrit.');
-        }
+        local.clearGame();
+        local.set('roomCode', roomCode);
+        local.set('roomId', roomId);
+        local.set('token', token);
+        window.location.replace(`/room/?code=${roomCode}`);
     });
 }
 
-if (isConfigureRoomPage) {
-    document.querySelector('#config-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-
-        const modality = document.querySelector('#modality').value;
-        const numRounds = document.querySelector('#num-rounds').value;
-        const maxPlayers = document.querySelector('#max-players').value;
-        const roundTime = document.querySelector('#round-time').value;
-
+if (path.includes('/configureRoom')) {
+    document.querySelector('#config-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
         const roomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
 
-        await fetch(`${API_URL}/rooms`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: roomCode })
-        });
-
-        const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
+        await fetch(`${API_URL}/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: roomCode }) });
+        const rooms = await fetchJSON(`${API_URL}/rooms?code=eq.${roomCode}`);
         const roomId = rooms[0].id;
 
         await fetch(`${API_URL}/parties`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                num_rounds: parseInt(numRounds),
-                max_players: parseInt(maxPlayers),
-                round_time: parseInt(roundTime),
+                num_rounds: parseInt(document.querySelector('#num-rounds').value),
+                max_players: parseInt(document.querySelector('#max-players').value),
+                round_time: parseInt(document.querySelector('#round-time').value),
                 room_id: roomId,
-                modality_id: parseInt(modality)
+                modality_id: parseInt(document.querySelector('#modality').value)
             })
         });
 
@@ -106,211 +127,374 @@ if (isConfigureRoomPage) {
         await fetch(`${API_URL}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username: localStorage.getItem('username'),
-                token: token,
-                is_host: true,
-                room_id: roomId
-            })
+            body: JSON.stringify({ username: local.get('username'), token, is_host: true, room_id: roomId })
         });
 
-        localStorage.setItem('roomCode', roomCode);
-        localStorage.setItem('roomId', roomId);
+        local.clearGame();
+        local.set('roomCode', roomCode);
+        local.set('roomId', roomId);
+        local.set('token', token);
         window.location.replace(`/room/?code=${roomCode}`);
     });
 }
 
-if (isRoomPage) {
-    const roomCode = localStorage.getItem('roomCode');
+if (path.includes('/room')) {
+    const roomCode = local.get('roomCode');
     document.querySelector('#coderoom').textContent = roomCode;
-
-    document.querySelector('#copycoderoom').addEventListener('click', () => {
-        navigator.clipboard.writeText(roomCode);
-    });
+    document.querySelector('#copycoderoom').addEventListener('click', () => navigator.clipboard.writeText(roomCode));
 
     const leaveBtn = document.querySelector('#leave-room-btn');
-    if (leaveBtn) {
-        leaveBtn.addEventListener('click', async (event) => {
-            event.preventDefault();
-
-            try {
-                const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
-                if (!rooms || rooms.length === 0) {
-                    window.location.replace('/createOrJoinRoom/');
-                    return;
-                }
-                const roomId = rooms[0].id;
-
-                const users = await (await fetch(`${API_URL}/users?room_id=eq.${roomId}`)).json();
-                const me = users.find(u => u.username === localStorage.getItem('username'));
-
-                if (me) {
-                    if (users.length === 1) {
-                        await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
-                        await fetch(`${API_URL}/parties?room_id=eq.${roomId}`, { method: 'DELETE' });
-                        await fetch(`${API_URL}/rooms?id=eq.${roomId}`, { method: 'DELETE' });
-                    }
-                    else if (me.is_host) {
-                        const nextHost = users.find(u => u.id !== me.id);
-                        if (nextHost) {
-                            await fetch(`${API_URL}/users?id=eq.${nextHost.id}`, {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ is_host: true })
-                            });
-                        }
-                        await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
-                    }
-                    else {
-                        await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
-                    }
-                }
-            } catch (error) {
-                console.error("Error al provar d'abandonar la sala:", error);
-            }
-
-            localStorage.removeItem('roomCode');
-            localStorage.removeItem('roomId');
-            window.location.replace('/createOrJoinRoom/');
-        });
-    }
+    if (leaveBtn) leaveBtn.addEventListener('click', abandonarSala);
 
     async function updatePlayerCount() {
-        const rooms = await (await fetch(`${API_URL}/rooms?code=eq.${roomCode}`)).json();
-
-        if (!rooms || rooms.length === 0) {
-            alert('Aquesta sala ha estat eliminada pel host.');
-            localStorage.removeItem('roomCode');
-            localStorage.removeItem('roomId');
+        const rooms = await fetchJSON(`${API_URL}/rooms?code=eq.${roomCode}`);
+        if (rooms.length === 0) {
+            alert('Aquesta sala ha estat eliminada.');
+            local.clearAll();
             window.location.replace('/createOrJoinRoom/');
             return;
         }
 
         const roomId = rooms[0].id;
-        const users = await (await fetch(`${API_URL}/users?room_id=eq.${roomId}`)).json();
-        const party = await (await fetch(`${API_URL}/parties?room_id=eq.${roomId}`)).json();
+        const users = await fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`);
+        const party = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`);
 
-        if (party && party.length > 0) {
-            document.querySelector('#number-of-players').textContent = `${users.length}/${party[0].max_players}`;
-        }
+        if (party.length > 0) document.querySelector('#number-of-players').textContent = `${users.length}/${party[0].max_players}`;
 
-        const me = users.find(u => u.username === localStorage.getItem('username'));
+        const me = users.find(u => u.token === local.get('token'));
         const playBtn = document.querySelector('#play-game-btn');
-
-        if (me && me.is_host) {
-            playBtn.classList.remove('hidden');
-        } else {
-            playBtn.classList.add('hidden');
+        if (playBtn) {
+            playBtn.classList.toggle('hidden', !(me && me.is_host));
+            playBtn.style.display = me && me.is_host ? '' : 'none';
         }
 
-        const playerList = document.querySelector('#player-list');
-        playerList.innerHTML = '';
-
-        users.forEach(user => {
-            const div = document.createElement('div');
-            div.className = 'flex items-center justify-between bg-white/20 px-4 py-3 rounded-xl text-white font-medium shadow-sm border border-white/10';
-
-            div.innerHTML = `
-                <span>${user.username}</span>
-                ${user.is_host ? '<i class="fa-solid fa-crown text-yellow-400 text-lg drop-shadow-[0_2px_4px_rgba(234,179,8,0.3)]"></i>' : ''}
-            `;
-
-            playerList.appendChild(div);
-        });
+        document.getElementById('player-list').innerHTML = users.map(u => `
+            <div class="flex items-center justify-between bg-white/20 px-4 py-3 rounded-xl text-white font-medium shadow-sm border border-white/10">
+                <span>${u.username}</span>
+                ${u.is_host ? '<i class="fa-solid fa-crown text-yellow-400 text-lg"></i>' : ''}
+            </div>
+        `).join('');
     }
 
     updatePlayerCount();
 
-    const eventSource = new EventSource('http://localhost:3001/events');
-
-    eventSource.addEventListener('users', (event) => {
-        updatePlayerCount();
+    const eventSource = getSSEConnection();
+    eventSource.addEventListener('users', updatePlayerCount);
+    eventSource.addEventListener('rooms', (e) => { if (JSON.parse(e.data).action === 'DELETE') updatePlayerCount(); });
+    eventSource.addEventListener('start', (e) => {
+        const payload = JSON.parse(e.data);
+        const tRoomId = payload.roomId || payload.data?.room_id;
+        if (String(tRoomId) === String(local.get('roomId'))) window.location.replace(`/round/?code=${roomCode}`);
     });
 
-    eventSource.addEventListener('start', (event) => {
-        let payload;
-        try {
-            payload = JSON.parse(event.data);
-        } catch (err) {
-            payload = event.data;
-        }
-
-        const targetRoomId = payload && (payload.roomId || (payload.data && payload.data.room_id));
-        const targetRoomCode = payload && (payload.roomCode || (payload.data && payload.data.room_code));
-
-        const currentRoomId = localStorage.getItem('roomId');
-        const currentRoomCode = localStorage.getItem('roomCode');
-
-        if (String(targetRoomId) === String(currentRoomId) || String(targetRoomCode) === String(currentRoomCode)) {
-            window.location.replace(`/round/?code=${currentRoomCode}`);
-        }
-    });
-
-    eventSource.addEventListener('rooms', (event) => {
-        const payload = JSON.parse(event.data);
-        if (payload.action === 'DELETE') {
-            updatePlayerCount();
-        }
-    });
-
-    eventSource.onerror = () => {
-        console.warn('Connexió SSE perduda. Reconnectant...');
-    };
-}
-
-if (isRoomPage) {
     const playBtnGlobal = document.querySelector('#play-game-btn');
     if (playBtnGlobal) {
         playBtnGlobal.addEventListener('click', async (e) => {
             e.preventDefault();
-            const roomCode = localStorage.getItem('roomCode');
-            const roomId = localStorage.getItem('roomId');
-            try {
-                await fetch('http://localhost:3001/broadcast', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ event: 'start', data: { roomId: roomId, roomCode: roomCode } })
-                });
-            } catch (err) {
-                console.error('Error broadcasting start event:', err);
-            }
+            local.clearGame();
+            await fetch('http://localhost:3001/broadcast', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event: 'start', data: { roomId: local.get('roomId'), roomCode } })
+            });
         });
     }
 }
 
-if (isRoundPage) {
-    function iniciarRonda() {
-        let tempsRestant = 3;
+if (path.includes('/round')) {
+    let currentRound = parseInt(local.get('currentRound')) || 1;
+    let totalRounds, roundTime, currentPartyId, currentRoundId, myUserId, myAnswer = null;
 
-        const pantallaComptador = document.getElementById('pantalla-comptador');
-        const contingutJoc = document.getElementById('contingut-joc');
-        const spanSegons = document.getElementById('segons');
+    async function start() {
+        myUserId = await assegurarMyUserId();
+        const roomId = local.get('roomId');
+        const party = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`);
 
-        pantallaComptador.classList.remove('hidden');
-        pantallaComptador.classList.add('flex');
-        contingutJoc.classList.replace('flex', 'hidden');
+        totalRounds = party[0].num_rounds;
+        roundTime = party[0].round_time;
+        currentPartyId = party[0].id;
 
-        spanSegons.textContent = tempsRestant;
+        local.set('currentRound', currentRound);
+        local.set('totalRounds', totalRounds);
+        local.set('currentPartyId', currentPartyId);
 
-        const interval = setInterval(() => {
-            tempsRestant--;
+        initCountdown();
+    }
 
-            if (tempsRestant > 0) {
-                spanSegons.textContent = tempsRestant;
-            } else {
+    function initCountdown() {
+        let seconds = 3;
+        const contador = document.getElementById('pantalla-comptador');
+        const game = document.getElementById('contingut-joc');
+        const span = document.getElementById('segons');
+
+        const tick = () => {
+            span.textContent = seconds;
+            if (seconds === 0) {
+                contador.classList.add('hidden');
+                game.classList.remove('hidden');
+                loadRound();
+            } else { seconds--; setTimeout(tick, 1000); }
+        };
+        tick();
+    }
+
+    async function loadRound() {
+        const rounds = await fetchJSON(`${API_URL}/rounds?party_id=eq.${currentPartyId}&order=id.asc`);
+        if (rounds.length >= currentRound) {
+            const round = rounds[currentRound - 1];
+            currentRoundId = round.id;
+            local.set('currentRoundId', currentRoundId);
+            showRoundContent(round);
+        } else {
+            const res = await fetchJSON(`${API_URL}/rpc/ensure_round`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ p_party_id: currentPartyId, p_round_number: currentRound })
+            });
+            const round = await fetchJSON(`${API_URL}/rounds?id=eq.${res}`);
+            currentRoundId = res;
+            local.set('currentRoundId', currentRoundId);
+            showRoundContent(round[0]);
+        }
+    }
+
+    function showRoundContent(round) {
+        const content = round.content;
+        const isImg = content.includes('data:image') || content.includes('http') || content.includes('.png');
+        document.getElementById('round-content').innerHTML = isImg ? `<img src="${content}" class="max-w-full h-auto max-h-96 rounded-2xl shadow-lg">` : `<div class="text-5xl font-bold text-white text-center">${content}</div>`;
+        document.getElementById('round-title').textContent = `Ronda ${currentRound} de ${totalRounds}`;
+
+        const input = document.getElementById('answer-input');
+        const btn = document.getElementById('submit-btn');
+
+        const submitCurrentAnswer = async () => {
+            if (myAnswer || !input.value.trim()) return;
+            myAnswer = input.value.trim();
+            await fetch('http://localhost:3001/answers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: myAnswer, round_id: currentRoundId, user_id: myUserId })
+            });
+            input.disabled = btn.disabled = true;
+            btn.textContent = '✓ Resposta enviada';
+        };
+
+        btn.onclick = submitCurrentAnswer;
+
+        let time = roundTime;
+        const timer = document.getElementById('timer');
+        const interval = setInterval(async () => {
+            timer.textContent = --time;
+            if (time <= 0) {
                 clearInterval(interval);
-
-                pantallaComptador.classList.replace('flex', 'hidden');
-                contingutJoc.classList.replace('hidden', 'flex');
-
-                començarJoc();
+                await submitCurrentAnswer();
+                window.location.replace('/answersVotes/');
             }
         }, 1000);
     }
 
-    function començarJoc() {
+    document.getElementById('leave-round-btn').onclick = abandonarSala;
+    start();
+}
 
+if (path.includes('/answersVotes')) {
+    let selectedAnswerId = null, voteTime = 30, myUserId = null, voteSubmitted = false;
+    const currentRoundId = local.get('currentRoundId');
+
+    getSSEConnection().addEventListener('answers', async (e) => {
+        if (String(JSON.parse(e.data).data?.round_id) === String(currentRoundId)) await loadAnswers();
+    });
+
+    async function loadAnswers() {
+        myUserId = await assegurarMyUserId();
+        const answers = await fetchJSON(`${API_URL}/answers?round_id=eq.${currentRoundId}`);
+        const container = document.getElementById('answers-container');
+        container.innerHTML = '';
+
+        const voteable = answers.filter(a => a.user_id !== myUserId);
+        if (voteable.length === 0) {
+            container.innerHTML = `<div class="text-white text-center py-10">Esperant que els altres jugadors enviïn la seva frase...</div>`;
+            return;
+        }
+
+        voteable.forEach(ans => {
+            const div = document.createElement('div');
+            div.className = 'bg-white/20 rounded-2xl p-6 border-2 border-white/30 cursor-pointer text-white';
+            div.innerHTML = `<p>${ans.content}</p>`;
+            div.onclick = () => {
+                document.querySelectorAll('#answers-container > div').forEach(d => d.classList.remove('bg-white/40', 'border-white/80'));
+                div.classList.add('bg-white/40', 'border-white/80');
+                selectedAnswerId = ans.id;
+                document.getElementById('submit-vote-btn').disabled = false;
+            };
+            container.appendChild(div);
+        });
     }
 
-    iniciarRonda();
+    async function init() {
+        myUserId = await assegurarMyUserId();
+
+        await loadAnswers();
+
+        let remaining = voteTime;
+        const timer = document.getElementById('vote-timer');
+        timer.textContent = remaining;
+        const interval = setInterval(async () => {
+            remaining -= 1;
+            timer.textContent = remaining;
+            if (remaining <= 0) {
+                clearInterval(interval);
+                if (!voteSubmitted && selectedAnswerId) {
+                    voteSubmitted = true;
+                    await fetch('http://localhost:3001/votes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer_id: selectedAnswerId, user_id: myUserId }) });
+                }
+                window.location.replace('/ranking/');
+            }
+        }, 1000);
+
+        document.getElementById('submit-vote-btn').onclick = async () => {
+            if (voteSubmitted) return;
+            voteSubmitted = true;
+            document.getElementById('submit-vote-btn').disabled = true;
+            document.getElementById('submit-vote-btn').textContent = 'Vot enviat, esperant...';
+            await fetch('http://localhost:3001/votes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer_id: selectedAnswerId, user_id: myUserId }) });
+        };
+    }
+
+    document.getElementById('leave-vote-btn').onclick = abandonarSala;
+    init();
+}
+
+if (path.includes('/ranking')) {
+    let countdown = 5;
+    const currentRound = parseInt(local.get('currentRound'), 10);
+    const totalRounds = parseInt(local.get('totalRounds'), 10);
+
+    async function init() {
+        const users = await fetchJSON(`${API_URL}/users?room_id=eq.${local.get('roomId')}`);
+        const answers = await fetchJSON(`${API_URL}/answers?round_id=eq.${local.get('currentRoundId')}`);
+        const votes = await fetchJSON(`${API_URL}/votes`);
+
+        const scores = {};
+        answers.forEach(a => { scores[a.user_id] = 0; });
+
+        votes.forEach(v => {
+            const answer = answers.find(a => a.id === v.answer_id);
+            if (answer && scores[answer.user_id] !== undefined) {
+                scores[answer.user_id] += 1000;
+            }
+        });
+
+        const voteCounts = {};
+        votes.forEach(v => { voteCounts[v.answer_id] = (voteCounts[v.answer_id] || 0) + 1; });
+
+        const totalAnswers = answers.length;
+        Object.entries(voteCounts).forEach(([answerId, count]) => {
+            if (count === totalAnswers) {
+                const answer = answers.find(a => a.id === parseInt(answerId, 10));
+                if (answer) {
+                    scores[answer.user_id] += Math.floor(scores[answer.user_id] * 0.1);
+                }
+            }
+        });
+
+        const sortedUsers = [...users].sort((a, b) => (scores[b.id] || 0) - (scores[a.id] || 0) || a.username.localeCompare(b.username));
+
+        document.getElementById('round-counter').textContent = `Ronda ${currentRound} de ${totalRounds}`;
+
+        const ranking = document.getElementById('ranking-list');
+        ranking.innerHTML = sortedUsers.map(user => {
+            const points = scores[user.id] || 0;
+            return `
+                <div class="bg-white/20 rounded-2xl p-4 border border-white/30 backdrop-blur flex items-center justify-between">
+                    <span class="text-xl font-bold text-white">${user.username}</span>
+                    <span class="text-2xl font-bold text-yellow-300">+${points}</span>
+                </div>
+            `;
+        }).join('');
+
+        const timer = setInterval(() => {
+            document.querySelector('#countdown span').textContent = --countdown;
+            if (countdown <= 0) {
+                clearInterval(timer);
+                if (currentRound + 1 <= totalRounds) {
+                    local.set('currentRound', (currentRound + 1).toString());
+                    window.location.replace('/round/');
+                } else {
+                    window.location.replace('/podium/');
+                }
+            }
+        }, 1000);
+    }
+    init();
+}
+
+if (path.includes('/podium')) {
+    (async function init() {
+        const roomId = local.get('roomId');
+        let currentPartyId = local.get('currentPartyId');
+
+        if (!currentPartyId) {
+            const parties = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`);
+            currentPartyId = parties[0]?.id;
+        }
+
+        const [users, rounds] = await Promise.all([
+            fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`),
+            currentPartyId ? fetchJSON(`${API_URL}/rounds?party_id=eq.${currentPartyId}`) : []
+        ]);
+
+        const roundIds = rounds.map(r => r.id).filter(Boolean);
+        const answers = roundIds.length ? await fetchJSON(`${API_URL}/answers?round_id=in.(${roundIds.join(',')})`) : [];
+
+        const answerIds = answers.map(a => a.id).filter(Boolean);
+        const votes = answerIds.length ? await fetchJSON(`${API_URL}/votes?answer_id=in.(${answerIds.join(',')})`) : [];
+
+        const scores = Object.fromEntries(users.map(u => [u.id, 0]));
+        const answerMap = new Map(answers.map(a => [a.id, a]));
+        const votesByAnswer = {};
+
+        votes.forEach(vote => {
+            votesByAnswer[vote.answer_id] = (votesByAnswer[vote.answer_id] || 0) + 1;
+            const ans = answerMap.get(vote.answer_id);
+            if (ans && scores[ans.user_id] !== undefined) scores[ans.user_id] += 1000;
+        });
+
+        const answersByRound = Object.groupBy ? Object.groupBy(answers, a => a.round_id) :
+            answers.reduce((acc, a) => ((acc[a.round_id] ??= []).push(a), acc), {});
+
+        Object.values(answersByRound).forEach(roundAnswers => {
+            const totalRoundVotes = roundAnswers.reduce((sum, a) => sum + (votesByAnswer[a.id] || 0), 0);
+
+            roundAnswers.forEach(ans => {
+                if (votesByAnswer[ans.id] === totalRoundVotes && totalRoundVotes > 0 && scores[ans.user_id] !== undefined) {
+                    scores[ans.user_id] += Math.floor(scores[ans.user_id] * 0.1);
+                }
+            });
+        });
+
+        const sortedUsers = [...users].sort((a, b) =>
+            (scores[b.id] - scores[a.id]) || a.username.localeCompare(b.username)
+        );
+
+        const updatePodiumPos = (pos, user, fallback) => {
+            document.getElementById(`${pos}-name`).textContent = user ? user.username : fallback;
+            document.getElementById(`${pos}-score`).textContent = `${scores[user?.id] || 0} punts`;
+        };
+        updatePodiumPos('first', sortedUsers[0], 'Esperant...');
+        updatePodiumPos('second', sortedUsers[1], '---');
+        updatePodiumPos('third', sortedUsers[2], '---');
+
+        document.getElementById('podium-list').innerHTML = sortedUsers.map((user, index) => `
+            <div class="bg-white/10 rounded-3xl p-4 border border-white/15 backdrop-blur flex items-center justify-between">
+                <div>
+                    <p class="text-sm uppercase text-white/60">${index + 1}r lloc</p>
+                    <p class="text-lg font-semibold text-white">${user.username}</p>
+                </div>
+                <span class="text-2xl font-bold text-amber-200">${scores[user.id] || 0}</span>
+            </div>
+        `).join('');
+
+        document.getElementById('leave-podium-btn').onclick = abandonarSala;
+    })();
 }
