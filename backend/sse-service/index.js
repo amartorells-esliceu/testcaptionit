@@ -145,6 +145,42 @@ app.post('/broadcast', (req, res) => {
   }
 });
 
+app.post('/answers', async (req, res) => {
+  const { content, round_id, user_id } = req.body || {};
+  if (!content || !round_id || !user_id) {
+    return res.status(400).json({ error: 'missing content, round_id or user_id' });
+  }
+
+  try {
+    const result = await pgClient.query(
+      'INSERT INTO answers (content, round_id, user_id) VALUES ($1, $2, $3) RETURNING *',
+      [content, parseInt(round_id, 10), parseInt(user_id, 10)]
+    );
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('insert answer error', err.message || err);
+    return res.status(500).json({ error: 'insert answer failed' });
+  }
+});
+
+app.post('/votes', async (req, res) => {
+  const { answer_id, user_id } = req.body || {};
+  if (!answer_id || !user_id) {
+    return res.status(400).json({ error: 'missing answer_id or user_id' });
+  }
+
+  try {
+    const result = await pgClient.query(
+      'INSERT INTO votes (answer_id, user_id) VALUES ($1, $2) RETURNING *',
+      [parseInt(answer_id, 10), parseInt(user_id, 10)]
+    );
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('insert vote error', err.message || err);
+    return res.status(500).json({ error: 'insert vote failed' });
+  }
+});
+
 (async () => {
   await reconnect();
   app.listen(PORT, () => {
