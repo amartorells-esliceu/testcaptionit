@@ -6,16 +6,17 @@ services:
       - 5432:5432
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-captionit@1234}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
+      JWT_EXPIRY: ${JWT_EXPIRY:-86400}
     volumes:
       - data:/var/lib/postgresql/data
       - ./backend/initdb:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s     
-      timeout: 5s       
-      retries: 10       
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
       start_period: 20s
 
   pgadmin:
@@ -35,14 +36,15 @@ services:
     image: postgrest/postgrest
     restart: unless-stopped
     environment:
-      PGRST_DB_URI: postgres://authenticator:captionit%401234@db:5432/${POSTGRES_DB:-postgres}
+      # Sincronitzat de forma dinàmica amb l'usuari 'authenticator' i la seva contrasenya
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
       PGRST_DB_SCHEMAS: "public, basic_auth"
       PGRST_DB_ANON_ROLE: anon
-      PGRST_JWT_SECRET: ""
+      PGRST_JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
       PGRST_SERVER_HOST: 0.0.0.0
     ports:
       - 3000:3000
-    command: ["postgrest"]
+    command: [ "postgrest" ]
     depends_on:
       db:
         condition: service_healthy
@@ -66,22 +68,21 @@ services:
       PGPORT: 5432
       PGDATABASE: ${POSTGRES_DB:-postgres}
       PGUSER: postgres
-      PGPASSWORD: ${POSTGRES_PASSWORD:-captionit@1234}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
       PG_CHANNEL: messages_changes
     depends_on:
       db:
         condition: service_healthy
 
   frontend:
-      build:
-        context: ./frontend
-      restart: unless-stopped
-      volumes:
-        - ./frontend:/app
-        - /app/node_modules
-      ports:
-        - "5173:5173"
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
 
 volumes:
   data:
-  

@@ -16,7 +16,7 @@ IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'anon') THEN
     CREATE ROLE anon NOINHERIT;
 END IF;
 IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'authenticator') THEN
-    CREATE ROLE authenticator WITH LOGIN PASSWORD 'captionit@1234';
+    CREATE ROLE authenticator WITH LOGIN PASSWORD 'postgres'; 
 END IF;
 END $$;
 
