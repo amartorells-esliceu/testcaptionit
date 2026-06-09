@@ -60,6 +60,16 @@ async function abandonarSala() {
 
 const path = window.location.pathname;
 
+async function startGame() {
+    local.clearGame();
+    const roomCode = local.get('roomCode');
+    await fetch('http://localhost:3001/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event: 'start', data: { roomId: local.get('roomId'), roomCode } })
+    });
+}
+
 if (path === '/' || path === '/index.html') {
     document.querySelector('form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -189,15 +199,7 @@ if (path.includes('/room')) {
 
     const playBtnGlobal = document.querySelector('#play-game-btn');
     if (playBtnGlobal) {
-        playBtnGlobal.addEventListener('click', async (e) => {
-            e.preventDefault();
-            local.clearGame();
-            await fetch('http://localhost:3001/broadcast', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ event: 'start', data: { roomId: local.get('roomId'), roomCode } })
-            });
-        });
+        playBtnGlobal.addEventListener('click', startGame);
     }
 }
 
@@ -430,6 +432,17 @@ if (path.includes('/ranking')) {
 }
 
 if (path.includes('/podium')) {
+    const roomCode = local.get('roomCode');
+    
+    getSSEConnection().addEventListener('start', (e) => {
+        const payload = JSON.parse(e.data);
+        const tRoomId = payload.roomId || payload.data?.room_id;
+        if (String(tRoomId) === String(local.get('roomId'))) {
+            local.clearGame();
+            window.location.replace(`/round/?code=${roomCode}`);
+        }
+    });
+
     (async function init() {
         const roomId = local.get('roomId');
         let currentPartyId = local.get('currentPartyId');
@@ -494,6 +507,44 @@ if (path.includes('/podium')) {
                 <span class="text-2xl font-bold text-amber-200">${scores[user.id] || 0}</span>
             </div>
         `).join('');
+
+        const me = users.find(u => u.token === local.get('token'));
+        const newGameBtn = document.querySelector('#new-game-btn');
+        if (newGameBtn) {
+            newGameBtn.classList.toggle('hidden', !me?.is_host);
+            newGameBtn.style.display = me?.is_host ? '' : 'none';
+            if (me?.is_host) {
+                newGameBtn.addEventListener('click', async () => {
+                    const oldParty = await fetchJSON(`${API_URL}/parties?id=eq.${currentPartyId}`);
+                    if (oldParty.length > 0) {
+                        // Esborrar les rondes de la partida anterior per generar contingut nou
+                        try {
+                            await fetch(`${API_URL}/rounds?party_id=eq.${currentPartyId}`, { method: 'DELETE' });
+                        } catch (e) {
+                            console.error("Error eliminant rondes anteriors:", e);
+                        }
+                        
+                        // Crear la nova partida amb els mateixos paràmetres
+                        await fetch(`${API_URL}/parties`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                num_rounds: oldParty[0].num_rounds,
+                                max_players: oldParty[0].max_players,
+                                round_time: oldParty[0].round_time,
+                                room_id: roomId,
+                                modality_id: oldParty[0].modality_id
+                            })
+                        });
+                        const newParties = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}&order=id.desc&limit=1`);
+                        if (newParties.length > 0) {
+                            local.set('currentPartyId', newParties[0].id);
+                            await startGame();
+                        }
+                    }
+                });
+            }
+        }
 
         document.getElementById('leave-podium-btn').onclick = abandonarSala;
     })();
