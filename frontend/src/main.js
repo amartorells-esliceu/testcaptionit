@@ -433,7 +433,7 @@ if (path.includes('/ranking')) {
 
 if (path.includes('/podium')) {
     const roomCode = local.get('roomCode');
-    
+
     getSSEConnection().addEventListener('start', (e) => {
         const payload = JSON.parse(e.data);
         const tRoomId = payload.roomId || payload.data?.room_id;
@@ -517,14 +517,12 @@ if (path.includes('/podium')) {
                 newGameBtn.addEventListener('click', async () => {
                     const oldParty = await fetchJSON(`${API_URL}/parties?id=eq.${currentPartyId}`);
                     if (oldParty.length > 0) {
-                        // Esborrar les rondes de la partida anterior per generar contingut nou
                         try {
                             await fetch(`${API_URL}/rounds?party_id=eq.${currentPartyId}`, { method: 'DELETE' });
                         } catch (e) {
                             console.error("Error eliminant rondes anteriors:", e);
                         }
-                        
-                        // Crear la nova partida amb els mateixos paràmetres
+
                         await fetch(`${API_URL}/parties`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
