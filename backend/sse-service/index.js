@@ -71,6 +71,7 @@ async function createListenerClient() {
 }
 
 let pgClient = null;
+let writerClient = null;
 
 async function reconnect() {
   try {
@@ -152,7 +153,8 @@ app.post('/answers', async (req, res) => {
   }
 
   try {
-    const result = await pgClient.query(
+    if (!writerClient) throw new Error('no writer DB client');
+    const result = await writerClient.query(
       'INSERT INTO answers (content, round_id, user_id) VALUES ($1, $2, $3) RETURNING *',
       [content, parseInt(round_id, 10), parseInt(user_id, 10)]
     );
@@ -170,7 +172,8 @@ app.post('/votes', async (req, res) => {
   }
 
   try {
-    const result = await pgClient.query(
+    if (!writerClient) throw new Error('no writer DB client');
+    const result = await writerClient.query(
       'INSERT INTO votes (answer_id, user_id) VALUES ($1, $2) RETURNING *',
       [parseInt(answer_id, 10), parseInt(user_id, 10)]
     );
@@ -183,6 +186,20 @@ app.post('/votes', async (req, res) => {
 
 (async () => {
   await reconnect();
+  // create a separate client for performing queries (inserts/updates)
+  try {
+    writerClient = new Client({
+      host: PG_HOST,
+      port: PG_PORT,
+      database: PG_DB,
+      user: PG_USER,
+      password: PG_PASSWORD,
+    });
+    await writerClient.connect();
+    console.log('writer DB client connected');
+  } catch (err) {
+    console.error('writer client connect failed:', err.message || err);
+  }
   app.listen(PORT, () => {
     console.log(`Stream endpoint: http://localhost:${PORT}/events`);
     console.log(`Health endpoint: http://localhost:${PORT}/health`);
