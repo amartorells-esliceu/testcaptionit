@@ -206,15 +206,19 @@ if (path.includes('/room')) {
 if (path.includes('/round')) {
     let currentRound = parseInt(local.get('currentRound')) || 1;
     let totalRounds, roundTime, currentPartyId, currentRoundId, myUserId, myAnswer = null;
+    let roundInterval = null;
+    let totalUsers = 0;
 
     async function start() {
         myUserId = await assegurarMyUserId();
         const roomId = local.get('roomId');
-        const party = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`);
+        const party = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}&order=id.desc&limit=1`);
+        const users = await fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`);
 
         totalRounds = party[0].num_rounds;
         roundTime = party[0].round_time;
         currentPartyId = party[0].id;
+        totalUsers = users.length;
 
         local.set('currentRound', currentRound);
         local.set('totalRounds', totalRounds);
@@ -260,6 +264,14 @@ if (path.includes('/round')) {
         }
     }
 
+    async function checkIfAllAnswered() {
+        const answers = await fetchJSON(`${API_URL}/answers?round_id=eq.${currentRoundId}`);
+        if (answers.length > 0 && totalUsers > 0 && answers.length === totalUsers) {
+            clearInterval(roundInterval);
+            window.location.replace('/answersVotes/');
+        }
+    }
+
     function showRoundContent(round) {
         const content = round.content;
         const isImg = content.includes('data:image') || content.includes('http') || content.includes('.png');
@@ -268,6 +280,12 @@ if (path.includes('/round')) {
 
         const input = document.getElementById('answer-input');
         const btn = document.getElementById('submit-btn');
+
+        getSSEConnection().addEventListener('answers', async (e) => {
+            if (String(JSON.parse(e.data).data?.round_id) === String(currentRoundId)) {
+                await checkIfAllAnswered();
+            }
+        });
 
         const submitCurrentAnswer = async () => {
             if (myAnswer || !input.value.trim()) return;
@@ -285,10 +303,12 @@ if (path.includes('/round')) {
 
         let time = roundTime;
         const timer = document.getElementById('timer');
-        const interval = setInterval(async () => {
+        roundInterval = setInterval(async () => {
             timer.textContent = --time;
+            await checkIfAllAnswered();
+
             if (time <= 0) {
-                clearInterval(interval);
+                clearInterval(roundInterval);
                 await submitCurrentAnswer();
                 window.location.replace('/answersVotes/');
             }
@@ -302,20 +322,17 @@ if (path.includes('/round')) {
 if (path.includes('/answersVotes')) {
     let selectedAnswerId = null, voteTime = 30, myUserId = null, voteSubmitted = false;
     const currentRoundId = local.get('currentRoundId');
-
-    getSSEConnection().addEventListener('answers', async (e) => {
-        if (String(JSON.parse(e.data).data?.round_id) === String(currentRoundId)) await loadAnswers();
-    });
+    let voteInterval = null;
+    let totalUsers = 0;
 
     async function loadAnswers() {
-        myUserId = await assegurarMyUserId();
         const answers = await fetchJSON(`${API_URL}/answers?round_id=eq.${currentRoundId}`);
         const container = document.getElementById('answers-container');
         container.innerHTML = '';
 
         const voteable = answers.filter(a => a.user_id !== myUserId);
         if (voteable.length === 0) {
-            container.innerHTML = `<div class="text-white text-center py-10">Esperant que els altres jugadors enviïn la seva frase...</div>`;
+            container.innerHTML = `<div class="text-white text-center py-10">No hi ha respostes per votar.</div>`;
             return;
         }
 
@@ -333,19 +350,45 @@ if (path.includes('/answersVotes')) {
         });
     }
 
+    async function checkIfAllVoted() {
+        const answers = await fetchJSON(`${API_URL}/answers?round_id=eq.${currentRoundId}`);
+        const answerIds = answers.map(a => a.id);
+
+        if (answerIds.length === 0) return;
+
+        const votes = await fetchJSON(`${API_URL}/votes?answer_id=in.(${answerIds.join(',')})`);
+        if (votes.length > 0 && totalUsers > 0 && votes.length === totalUsers) {
+            clearInterval(voteInterval);
+            window.location.replace('/ranking/');
+        }
+    }
+
     async function init() {
         myUserId = await assegurarMyUserId();
+        const roomId = local.get('roomId');
+        const users = await fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`);
+        totalUsers = users.length;
+
+        getSSEConnection().addEventListener('answers', async (e) => {
+            if (String(JSON.parse(e.data).data?.round_id) === String(currentRoundId)) await loadAnswers();
+        });
+
+        getSSEConnection().addEventListener('votes', async () => {
+            await checkIfAllVoted();
+        });
 
         await loadAnswers();
 
         let remaining = voteTime;
         const timer = document.getElementById('vote-timer');
         timer.textContent = remaining;
-        const interval = setInterval(async () => {
+        voteInterval = setInterval(async () => {
             remaining -= 1;
             timer.textContent = remaining;
+            await checkIfAllVoted();
+
             if (remaining <= 0) {
-                clearInterval(interval);
+                clearInterval(voteInterval);
                 if (!voteSubmitted && selectedAnswerId) {
                     voteSubmitted = true;
                     await fetch('http://localhost:3001/votes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer_id: selectedAnswerId, user_id: myUserId }) });
@@ -448,7 +491,7 @@ if (path.includes('/podium')) {
         let currentPartyId = local.get('currentPartyId');
 
         if (!currentPartyId) {
-            const parties = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`);
+            const parties = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}&order=id.desc&limit=1`);
             currentPartyId = parties[0]?.id;
         }
 
@@ -517,11 +560,7 @@ if (path.includes('/podium')) {
                 newGameBtn.addEventListener('click', async () => {
                     const oldParty = await fetchJSON(`${API_URL}/parties?id=eq.${currentPartyId}`);
                     if (oldParty.length > 0) {
-                        try {
-                            await fetch(`${API_URL}/rounds?party_id=eq.${currentPartyId}`, { method: 'DELETE' });
-                        } catch (e) {
-                            console.error("Error eliminant rondes anteriors:", e);
-                        }
+                        await fetch(`${API_URL}/rounds?party_id=eq.${currentPartyId}`, { method: 'DELETE' });
 
                         await fetch(`${API_URL}/parties`, {
                             method: 'POST',
