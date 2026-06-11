@@ -80,7 +80,7 @@ if (path === '/' || path === '/index.html') {
     });
 }
 
-if (path.includes('/createOrJoinRoom')) {
+
     document.querySelector('#welcome').textContent = `Hola, ${local.get('username')}! Escull una sala per continuar.`;
     document.querySelector('#create-room-btn').addEventListener('click', () => window.location.replace('/configureRoom/'));
     document.querySelector('#show-join-btn').addEventListener('click', () => document.querySelector('#join-section').classList.toggle('hidden'));
@@ -112,7 +112,6 @@ if (path.includes('/createOrJoinRoom')) {
         local.set('token', token);
         window.location.replace(`/room/?code=${roomCode}`);
     });
-}
 
 if (path.includes('/configureRoom')) {
     document.querySelector('#config-form').addEventListener('submit', async (e) => {
