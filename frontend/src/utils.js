@@ -1,5 +1,9 @@
-export const API_URL = 'http://localhost:3000';
-export const SSE_URL = 'http://localhost:3001/events';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const SSE_BASE_URL = import.meta.env.VITE_SSE_URL 
+    ? import.meta.env.VITE_SSE_URL.replace('/events', '') 
+    : 'http://localhost:3001';
+export const SSE_URL = `${SSE_BASE_URL}/events`;
+
 let sseConnection = null;
 
 export const fetchJSON = async (url, options) => await (await fetch(url, options)).json();
@@ -62,7 +66,7 @@ export async function abandonarSala() {
 export async function startGame() {
     local.clearGame();
     const roomCode = local.get('roomCode');
-    await fetch('http://localhost:3001/broadcast', {
+    await fetch(`${SSE_BASE_URL}/broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event: 'start', data: { roomId: local.get('roomId'), roomCode } })
