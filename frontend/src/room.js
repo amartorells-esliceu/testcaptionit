@@ -18,6 +18,8 @@ async function updatePlayerCount() {
     }
 
     const roomId = rooms[0].id;
+    local.set('roomId', roomId);
+
     const users = await fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`);
     const party = await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`);
 
@@ -43,10 +45,14 @@ updatePlayerCount();
 const eventSource = getSSEConnection();
 eventSource.addEventListener('users', updatePlayerCount);
 eventSource.addEventListener('rooms', (e) => { if (JSON.parse(e.data).action === 'DELETE') updatePlayerCount(); });
+
 eventSource.addEventListener('start', (e) => {
     const payload = JSON.parse(e.data);
     const tRoomId = payload.roomId || payload.data?.room_id;
-    if (String(tRoomId) === String(local.get('roomId'))) window.location.replace(`/round/?code=${roomCode}`);
+
+    if (String(tRoomId) === String(local.get('roomId'))) {
+        window.location.replace(`/round/?code=${roomCode}`);
+    }
 });
 
 const playBtnGlobal = document.querySelector('#play-game-btn');
