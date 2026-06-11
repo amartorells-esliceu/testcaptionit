@@ -6,11 +6,20 @@ import tailwindcss from '@tailwindcss/vite'
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  root: './', 
+  root: '.', 
   
   plugins: [
     tailwindcss(),
   ],
+
+  optimizeDeps: {
+    include: ['@tailwindcss/vite'],
+    esbuildOptions: {
+      loader: {
+        '.node': 'file',
+      },
+    },
+  },
 
   build: {
     rollupOptions: {
@@ -30,5 +39,12 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    watch: {
+      usePolling: true,
+      ignored: ['**/node_modules/**', '**/.vite/**'],
+    },
+    fs: {
+      allow: ['..']
+    }
   }
 })
