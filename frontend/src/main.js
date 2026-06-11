@@ -1,3 +1,5 @@
+import './input.css';
+
 const API_URL = 'http://localhost:3000';
 const SSE_URL = 'http://localhost:3001/events';
 let sseConnection = null;

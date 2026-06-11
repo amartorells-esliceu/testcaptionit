@@ -12,15 +12,6 @@ export default defineConfig({
     tailwindcss(),
   ],
 
-  optimizeDeps: {
-    include: ['@tailwindcss/vite'],
-    esbuildOptions: {
-      loader: {
-        '.node': 'file',
-      },
-    },
-  },
-
   build: {
     rollupOptions: {
       input: {
@@ -39,12 +30,5 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    watch: {
-      usePolling: true,
-      ignored: ['**/node_modules/**', '**/.vite/**'],
-    },
-    fs: {
-      allow: ['..']
-    }
   }
 })
