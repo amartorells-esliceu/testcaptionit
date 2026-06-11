@@ -43,7 +43,7 @@ services:
       PGRST_JWT_SECRET: ${JWT_SECRET:-clave-secreta-captionit-segura-1234}
       PGRST_SERVER_HOST: 0.0.0.0
     ports:
-      - 3000:3000
+      - "80:3000"
     command: [ "postgrest" ]
     depends_on:
       db:
@@ -61,7 +61,7 @@ services:
       context: ./backend/sse-service
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      - "8080:3001"
     environment:
       PORT: 3001
       PGHOST: db

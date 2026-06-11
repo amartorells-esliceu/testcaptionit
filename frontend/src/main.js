@@ -1,15 +1,20 @@
-const API_URL = 'http://localhost:3000';
-const SSE_URL = 'http://localhost:3001/events';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'; 
+export const SSE_BASE_URL = import.meta.env.VITE_SSE_URL 
+    ? import.meta.env.VITE_SSE_URL.replace('/events', '') 
+    : 'http://localhost:8080';
+
+export const SSE_URL = `${SSE_BASE_URL}/events`;
+
 let sseConnection = null;
 
-const fetchJSON = async (url, options) => await (await fetch(url, options)).json();
-const local = {
+export const fetchJSON = async (url, options) => await (await fetch(url, options)).json();
+
+export const local = {
     get: (key) => localStorage.getItem(key),
     set: (key, val) => localStorage.setItem(key, val),
     clearGame: () => ['currentRound', 'currentRoundId', 'totalRounds', 'currentPartyId', 'myUserId'].forEach(k => localStorage.removeItem(k)),
     clearAll: () => ['roomCode', 'roomId', 'token'].forEach(k => localStorage.removeItem(k))
 };
-
 function getSSEConnection() {
     if (!sseConnection || sseConnection.readyState === EventSource.CLOSED) {
         sseConnection = new EventSource(SSE_URL);
