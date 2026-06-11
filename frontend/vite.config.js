@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  root: '.', 
+  root: './', 
   
   plugins: [
     tailwindcss(),
