@@ -58,7 +58,7 @@ async function abandonarSala() {
     window.location.replace('/createOrJoinRoom/');
 }
 
-const path = window.location.pathname;
+const path = window.location.pathname.replace(/\/$/, "");
 
 async function startGame() {
     local.clearGame();
@@ -70,7 +70,7 @@ async function startGame() {
     });
 }
 
-if (path === '/' || path === '/index.html') {
+if (path === '' || path === '/' || path === '/index.html') {
     document.querySelector('form').addEventListener('submit', (e) => {
         e.preventDefault();
         local.set('username', document.querySelector('#username').value.trim());
@@ -78,7 +78,7 @@ if (path === '/' || path === '/index.html') {
     });
 }
 
-if (path.includes('/createOrJoinRoom')) {
+if (path.includes('createOrJoinRoom')) {
     document.querySelector('#welcome').textContent = `Hola, ${local.get('username')}! Escull una sala per continuar.`;
     document.querySelector('#create-room-btn').addEventListener('click', () => window.location.replace('/configureRoom/'));
     document.querySelector('#show-join-btn').addEventListener('click', () => document.querySelector('#join-section').classList.toggle('hidden'));
@@ -112,7 +112,7 @@ if (path.includes('/createOrJoinRoom')) {
     });
 }
 
-if (path.includes('/configureRoom')) {
+if (path.includes('configureRoom')) {
     document.querySelector('#config-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const roomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -148,7 +148,7 @@ if (path.includes('/configureRoom')) {
     });
 }
 
-if (path.includes('/room')) {
+if (path.includes('room')) {
     const roomCode = local.get('roomCode');
     document.querySelector('#coderoom').textContent = roomCode;
     document.querySelector('#copycoderoom').addEventListener('click', () => navigator.clipboard.writeText(roomCode));
@@ -203,7 +203,7 @@ if (path.includes('/room')) {
     }
 }
 
-if (path.includes('/round')) {
+if (path.includes('round')) {
     let currentRound = parseInt(local.get('currentRound')) || 1;
     let totalRounds, roundTime, currentPartyId, currentRoundId, myUserId, myAnswer = null;
     let roundInterval = null;
@@ -319,7 +319,7 @@ if (path.includes('/round')) {
     start();
 }
 
-if (path.includes('/answersVotes')) {
+if (path.includes('answersVotes')) {
     let selectedAnswerId = null, voteTime = 30, myUserId = null, voteSubmitted = false;
     const currentRoundId = local.get('currentRoundId');
     let voteInterval = null;
@@ -410,7 +410,7 @@ if (path.includes('/answersVotes')) {
     init();
 }
 
-if (path.includes('/ranking')) {
+if (path.includes('ranking')) {
     let countdown = 5;
     const currentRound = parseInt(local.get('currentRound'), 10);
     const totalRounds = parseInt(local.get('totalRounds'), 10);
@@ -474,7 +474,7 @@ if (path.includes('/ranking')) {
     init();
 }
 
-if (path.includes('/podium')) {
+if (path.includes('podium')) {
     const roomCode = local.get('roomCode');
 
     getSSEConnection().addEventListener('start', (e) => {
