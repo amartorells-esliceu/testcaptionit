@@ -1,21 +1,34 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'; 
+// CONFIGURACIÓ DE LES URLS (Dinàmiques per a Local o Netlify)
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 export const SSE_BASE_URL = import.meta.env.VITE_SSE_URL 
     ? import.meta.env.VITE_SSE_URL.replace('/events', '') 
     : 'http://localhost:8080';
 
 export const SSE_URL = `${SSE_BASE_URL}/events`;
 
+export const BROADCAST_URL = import.meta.env.VITE_BROADCAST_URL || 'http://localhost:3001';
+
 let sseConnection = null;
 
-export const fetchJSON = async (url, options) => await (await fetch(url, options)).json();
+// Funció utilitària per fer peticions fetch de manera més neta
+export const fetchJSON = async (url, options = {}) => {
+    const response = await fetch(url, options);
+    // Si la resposta és un 204 No Content (típic de DELETE o PATCH), evitem que .json() doni error
+    if (response.status === 204) return null;
+    return await response.json();
+};
 
+// Gestió de l'emmagatzematge local (LocalStorage)
 export const local = {
     get: (key) => localStorage.getItem(key),
     set: (key, val) => localStorage.setItem(key, val),
     clearGame: () => ['currentRound', 'currentRoundId', 'totalRounds', 'currentPartyId', 'myUserId'].forEach(k => localStorage.removeItem(k)),
-    clearAll: () => ['roomCode', 'roomId', 'token'].forEach(k => localStorage.removeItem(k))
+    clearAll: () => ['roomCode', 'roomId', 'token', 'currentRound', 'currentRoundId', 'totalRounds', 'currentPartyId', 'myUserId'].forEach(k => localStorage.removeItem(k))
 };
-function getSSEConnection() {
+
+// Funció per connectar i assegurar la connexió Server-Sent Events (SSE)
+export function getSSEConnection() {
     if (!sseConnection || sseConnection.readyState === EventSource.CLOSED) {
         sseConnection = new EventSource(SSE_URL);
         sseConnection.onopen = () => console.log('SSE connected');
@@ -24,13 +37,14 @@ function getSSEConnection() {
     return sseConnection;
 }
 
-async function assegurarMyUserId() {
+// Funció per recuperar o assegurar l'ID de l'usuari actual a través del token
+export async function assegurarMyUserId() {
     let myId = parseInt(local.get('myUserId'), 10);
     if (!myId || Number.isNaN(myId)) {
         const token = local.get('token');
         if (token) {
             const users = await fetchJSON(`${API_URL}/users?token=eq.${token}`);
-            if (users[0]) {
+            if (users && users[0]) {
                 myId = users[0].id;
                 local.set('myUserId', myId);
             }
@@ -39,7 +53,8 @@ async function assegurarMyUserId() {
     return myId;
 }
 
-async function abandonarSala() {
+// Funció global per sortir d'una sala i netejar la base de dades / host correctament
+export async function abandonarSala() {
     const roomId = local.get('roomId');
     try {
         const users = await fetchJSON(`${API_URL}/users?room_id=eq.${roomId}`);
@@ -47,34 +62,45 @@ async function abandonarSala() {
 
         if (me) {
             if (users.length === 1) {
-                await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
-                await fetch(`${API_URL}/parties?room_id=eq.${roomId}`, { method: 'DELETE' });
-                await fetch(`${API_URL}/rooms?id=eq.${roomId}`, { method: 'DELETE' });
+                await fetchJSON(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
+                await fetchJSON(`${API_URL}/parties?room_id=eq.${roomId}`, { method: 'DELETE' });
+                await fetchJSON(`${API_URL}/rooms?id=eq.${roomId}`, { method: 'DELETE' });
             } else {
                 if (me.is_host) {
                     const nextHost = users.find(u => u.id !== me.id);
-                    if (nextHost) await fetch(`${API_URL}/users?id=eq.${nextHost.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_host: true }) });
+                    if (nextHost) {
+                        await fetchJSON(`${API_URL}/users?id=eq.${nextHost.id}`, { 
+                            method: 'PATCH', 
+                            headers: { 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify({ is_host: true }) 
+                        });
+                    }
                 }
-                await fetch(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
+                await fetchJSON(`${API_URL}/users?id=eq.${me.id}`, { method: 'DELETE' });
             }
         }
-    } catch (e) { console.error("Error abandonant:", e); }
+    } catch (e) { 
+        console.error("Error abandonant la sala:", e); 
+    }
     local.clearAll();
     window.location.replace('/createOrJoinRoom/');
 }
+
+// --- LÒGICA DE RUTES I INTERFÍCIE (DOM) ---
 
 const path = window.location.pathname;
 
 async function startGame() {
     local.clearGame();
     const roomCode = local.get('roomCode');
-    await fetch('http://localhost:3001/broadcast', {
+    await fetch(`${BROADCAST_URL}/broadcast`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ event: 'start', data: { roomId: local.get('roomId'), roomCode } })
     });
 }
 
+// Ruta: Pàgina d'Inici (Login d'usuari)
 if (path === '/' || path === '/index.html') {
     document.querySelector('form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -83,6 +109,7 @@ if (path === '/' || path === '/index.html') {
     });
 }
 
+// Ruta: Triar entre Crear o Unir-se a una sala
 if (path.includes('/createOrJoinRoom')) {
     document.querySelector('#welcome').textContent = `Hola, ${local.get('username')}! Escull una sala per continuar.`;
     document.querySelector('#create-room-btn').addEventListener('click', () => window.location.replace('/configureRoom/'));
@@ -103,7 +130,7 @@ if (path.includes('/createOrJoinRoom')) {
         if (users.some(u => u.username.toLowerCase() === local.get('username').toLowerCase())) return alert('Nom d’usuari ja agafat.');
 
         const token = Math.random().toString(36).substring(2);
-        await fetch(`${API_URL}/users`, {
+        await fetchJSON(`${API_URL}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: local.get('username'), token, is_host: false, room_id: roomId })
@@ -117,29 +144,30 @@ if (path.includes('/createOrJoinRoom')) {
     });
 }
 
+// Ruta: Configurar els paràmetres de la nova sala
 if (path.includes('/configureRoom')) {
     document.querySelector('#config-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const roomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
 
-        await fetch(`${API_URL}/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: roomCode }) });
+        await fetchJSON(`${API_URL}/rooms`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: roomCode }) });
         const rooms = await fetchJSON(`${API_URL}/rooms?code=eq.${roomCode}`);
         const roomId = rooms[0].id;
 
-        await fetch(`${API_URL}/parties`, {
+        await fetchJSON(`${API_URL}/parties`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                num_rounds: parseInt(document.querySelector('#num-rounds').value),
-                max_players: parseInt(document.querySelector('#max-players').value),
-                round_time: parseInt(document.querySelector('#round-time').value),
+                num_rounds: parseInt(document.querySelector('#num-rounds').value, 10),
+                max_players: parseInt(document.querySelector('#max-players').value, 10),
+                round_time: parseInt(document.querySelector('#round-time').value, 10),
                 room_id: roomId,
-                modality_id: parseInt(document.querySelector('#modality').value)
+                modality_id: parseInt(document.querySelector('#modality').value, 10)
             })
         });
 
         const token = Math.random().toString(36).substring(2);
-        await fetch(`${API_URL}/users`, {
+        await fetchJSON(`${API_URL}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username: local.get('username'), token, is_host: true, room_id: roomId })
@@ -153,6 +181,7 @@ if (path.includes('/configureRoom')) {
     });
 }
 
+// Ruta: Sala d'espera (Lobby)
 if (path.includes('/room')) {
     const roomCode = local.get('roomCode');
     document.querySelector('#coderoom').textContent = roomCode;
@@ -208,8 +237,9 @@ if (path.includes('/room')) {
     }
 }
 
+// Ruta: Joc en curs (Ronda)
 if (path.includes('/round')) {
-    let currentRound = parseInt(local.get('currentRound')) || 1;
+    let currentRound = parseInt(local.get('currentRound'), 10) || 1;
     let totalRounds, roundTime, currentPartyId, currentRoundId, myUserId, myAnswer = null;
     let roundInterval = null;
     let totalUsers = 0;
@@ -295,7 +325,7 @@ if (path.includes('/round')) {
         const submitCurrentAnswer = async () => {
             if (myAnswer || !input.value.trim()) return;
             myAnswer = input.value.trim();
-            await fetch('http://localhost:3001/answers', {
+            await fetch(`${BROADCAST_URL}/answers`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: myAnswer, round_id: currentRoundId, user_id: myUserId })
@@ -324,6 +354,7 @@ if (path.includes('/round')) {
     start();
 }
 
+// Ruta: Votació de les respostes
 if (path.includes('/answersVotes')) {
     let selectedAnswerId = null, voteTime = 30, myUserId = null, voteSubmitted = false;
     const currentRoundId = local.get('currentRoundId');
@@ -396,7 +427,7 @@ if (path.includes('/answersVotes')) {
                 clearInterval(voteInterval);
                 if (!voteSubmitted && selectedAnswerId) {
                     voteSubmitted = true;
-                    await fetch('http://localhost:3001/votes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer_id: selectedAnswerId, user_id: myUserId }) });
+                    await fetch(`${BROADCAST_URL}/votes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer_id: selectedAnswerId, user_id: myUserId }) });
                 }
                 window.location.replace('/ranking/');
             }
@@ -407,7 +438,7 @@ if (path.includes('/answersVotes')) {
             voteSubmitted = true;
             document.getElementById('submit-vote-btn').disabled = true;
             document.getElementById('submit-vote-btn').textContent = 'Vot enviat, esperant...';
-            await fetch('http://localhost:3001/votes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer_id: selectedAnswerId, user_id: myUserId }) });
+            await fetch(`${BROADCAST_URL}/votes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answer_id: selectedAnswerId, user_id: myUserId }) });
         };
     }
 
@@ -415,6 +446,7 @@ if (path.includes('/answersVotes')) {
     init();
 }
 
+// Ruta: Classificació de la ronda actual
 if (path.includes('/ranking')) {
     let countdown = 5;
     const currentRound = parseInt(local.get('currentRound'), 10);
@@ -478,6 +510,7 @@ if (path.includes('/ranking')) {
     init();
 }
 
+// Ruta: Pòdi final de la partida
 if (path.includes('/podium')) {
     const roomCode = local.get('roomCode');
 
@@ -568,9 +601,9 @@ if (path.includes('/podium')) {
                 newGameBtn.addEventListener('click', async () => {
                     const oldParty = await fetchJSON(`${API_URL}/parties?id=eq.${currentPartyId}`);
                     if (oldParty.length > 0) {
-                        await fetch(`${API_URL}/rounds?party_id=eq.${currentPartyId}`, { method: 'DELETE' });
+                        await fetchJSON(`${API_URL}/rounds?party_id=eq.${currentPartyId}`, { method: 'DELETE' });
 
-                        await fetch(`${API_URL}/parties`, {
+                        await fetchJSON(`${API_URL}/parties`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
