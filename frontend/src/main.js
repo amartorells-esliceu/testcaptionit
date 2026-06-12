@@ -433,9 +433,8 @@ if (path.includes('/ranking')) {
         const voteCounts = {};
         votes.forEach(v => { voteCounts[v.answer_id] = (voteCounts[v.answer_id] || 0) + 1; });
 
-        const totalAnswers = answers.length;
         Object.entries(voteCounts).forEach(([answerId, count]) => {
-            if (count === totalUsers - 1) {
+            if (users.length > 2 && count === users.length - 1) {
                 const answer = answers.find(a => a.id === parseInt(answerId, 10));
                 if (answer) {
                     scores[answer.user_id] += Math.floor(scores[answer.user_id] * 0.1);
@@ -507,23 +506,29 @@ if (path.includes('/podium')) {
         const votes = answerIds.length ? await fetchJSON(`${API_URL}/votes?answer_id=in.(${answerIds.join(',')})`) : [];
 
         const scores = Object.fromEntries(users.map(u => [u.id, 0]));
-        const answerMap = new Map(answers.map(a => [a.id, a]));
-        const votesByAnswer = {};
-
-        votes.forEach(vote => {
-            votesByAnswer[vote.answer_id] = (votesByAnswer[vote.answer_id] || 0) + 1;
-            const ans = answerMap.get(vote.answer_id);
-            if (ans && scores[ans.user_id] !== undefined) scores[ans.user_id] += 1000;
-        });
 
         const answersByRound = Object.groupBy ? Object.groupBy(answers, a => a.round_id) :
             answers.reduce((acc, a) => ((acc[a.round_id] ??= []).push(a), acc), {});
 
         Object.values(answersByRound).forEach(roundAnswers => {
+            const roundScores = Object.fromEntries(users.map(u => [u.id, 0]));
+            const roundVotesCount = {};
+
             roundAnswers.forEach(ans => {
-                if (votesByAnswer[ans.id] === roundAnswers.length - 1 && scores[ans.user_id] !== undefined) {
-                    scores[ans.user_id] += Math.floor(scores[ans.user_id] * 0.1);
+                const ansVotes = votes.filter(v => v.answer_id === ans.id);
+                roundVotesCount[ans.id] = ansVotes.length;
+                roundScores[ans.user_id] += ansVotes.length * 1000;
+            });
+
+            roundAnswers.forEach(ans => {
+                const totalPlayersInRound = roundAnswers.length;
+                if (totalPlayersInRound > 2 && roundVotesCount[ans.id] === totalPlayersInRound - 1 && roundScores[ans.user_id] > 0) {
+                    roundScores[ans.user_id] += Math.floor(roundScores[ans.user_id] * 0.1);
                 }
+            });
+
+            users.forEach(u => {
+                scores[u.id] += roundScores[u.id];
             });
         });
 
