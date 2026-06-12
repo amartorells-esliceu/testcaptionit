@@ -435,7 +435,7 @@ if (path.includes('/ranking')) {
 
         const totalAnswers = answers.length;
         Object.entries(voteCounts).forEach(([answerId, count]) => {
-            if (count === totalAnswers) {
+            if (count === totalUsers - 1) {
                 const answer = answers.find(a => a.id === parseInt(answerId, 10));
                 if (answer) {
                     scores[answer.user_id] += Math.floor(scores[answer.user_id] * 0.1);
