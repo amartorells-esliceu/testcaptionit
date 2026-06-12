@@ -520,10 +520,8 @@ if (path.includes('/podium')) {
             answers.reduce((acc, a) => ((acc[a.round_id] ??= []).push(a), acc), {});
 
         Object.values(answersByRound).forEach(roundAnswers => {
-            const totalRoundVotes = roundAnswers.reduce((sum, a) => sum + (votesByAnswer[a.id] || 0), 0);
-
             roundAnswers.forEach(ans => {
-                if (votesByAnswer[ans.id] === totalRoundVotes && totalRoundVotes > 0 && scores[ans.user_id] !== undefined) {
+                if (votesByAnswer[ans.id] === roundAnswers.length - 1 && scores[ans.user_id] !== undefined) {
                     scores[ans.user_id] += Math.floor(scores[ans.user_id] * 0.1);
                 }
             });
