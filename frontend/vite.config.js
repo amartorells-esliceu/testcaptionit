@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  root: '.', 
+  root: '.',  
   
   plugins: [
     tailwindcss(),
@@ -29,9 +29,9 @@ export default defineConfig({
         ranking: resolve(__dirname, 'ranking/index.html'),
         podium: resolve(__dirname, 'podium/index.html'),
         room: resolve(__dirname, 'room/index.html'),
-        configureRoom: resolve(__dirname, 'configureRoom/index.html'),
-        createOrJoinRoom: resolve(__dirname, 'createOrJoinRoom/index.html'),
-        answersVotes: resolve(__dirname, 'answersVotes/index.html'),
+        configureroom: resolve(__dirname, 'configureroom/index.html'),
+        createorjoinroom: resolve(__dirname, 'createorjoinroom/index.html'),
+        answersvotes: resolve(__dirname, 'answersvotes/index.html'),
       },
     },
   },
