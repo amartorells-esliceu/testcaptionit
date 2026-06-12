@@ -1,4 +1,3 @@
-// CONFIGURACIÓ DE LES URLS (Dinàmiques per a Local o Netlify)
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export const SSE_BASE_URL = import.meta.env.VITE_SSE_URL 
@@ -11,15 +10,12 @@ export const BROADCAST_URL = import.meta.env.VITE_BROADCAST_URL || 'http://local
 
 let sseConnection = null;
 
-// Funció utilitària per fer peticions fetch de manera més neta
 export const fetchJSON = async (url, options = {}) => {
     const response = await fetch(url, options);
-    // Si la resposta és un 204 No Content (típic de DELETE o PATCH), evitem que .json() doni error
     if (response.status === 204) return null;
     return await response.json();
 };
 
-// Gestió de l'emmagatzematge local (LocalStorage)
 export const local = {
     get: (key) => localStorage.getItem(key),
     set: (key, val) => localStorage.setItem(key, val),
@@ -27,7 +23,6 @@ export const local = {
     clearAll: () => ['roomCode', 'roomId', 'token', 'currentRound', 'currentRoundId', 'totalRounds', 'currentPartyId', 'myUserId'].forEach(k => localStorage.removeItem(k))
 };
 
-// Funció per connectar i assegurar la connexió Server-Sent Events (SSE)
 export function getSSEConnection() {
     if (!sseConnection || sseConnection.readyState === EventSource.CLOSED) {
         sseConnection = new EventSource(SSE_URL);
@@ -37,7 +32,6 @@ export function getSSEConnection() {
     return sseConnection;
 }
 
-// Funció per recuperar o assegurar l'ID de l'usuari actual a través del token
 export async function assegurarMyUserId() {
     let myId = parseInt(local.get('myUserId'), 10);
     if (!myId || Number.isNaN(myId)) {
@@ -53,7 +47,6 @@ export async function assegurarMyUserId() {
     return myId;
 }
 
-// Funció global per sortir d'una sala i netejar la base de dades / host correctament
 export async function abandonarSala() {
     const roomId = local.get('roomId');
     try {
@@ -83,12 +76,10 @@ export async function abandonarSala() {
         console.error("Error abandonant la sala:", e); 
     }
     local.clearAll();
-    window.location.replace('/createOrJoinRoom/');
+    window.location.replace('/createorjoinroom/');
 }
 
-// --- LÒGICA DE RUTES I INTERFÍCIE (DOM) ---
-
-const path = window.location.pathname;
+const path = window.location.pathname.toLowerCase();
 
 async function startGame() {
     local.clearGame();
@@ -100,19 +91,17 @@ async function startGame() {
     });
 }
 
-// Ruta: Pàgina d'Inici (Login d'usuari)
 if (path === '/' || path === '/index.html') {
     document.querySelector('form').addEventListener('submit', (e) => {
         e.preventDefault();
         local.set('username', document.querySelector('#username').value.trim());
-        window.location.replace('/createOrJoinRoom/');
+        window.location.replace('/createorjoinroom/');
     });
 }
 
-// Ruta: Triar entre Crear o Unir-se a una sala
-if (path.includes('/createOrJoinRoom')) {
+if (path.includes('/createorjoinroom')) {
     document.querySelector('#welcome').textContent = `Hola, ${local.get('username')}! Escull una sala per continuar.`;
-    document.querySelector('#create-room-btn').addEventListener('click', () => window.location.replace('/configureRoom/'));
+    document.querySelector('#create-room-btn').addEventListener('click', () => window.location.replace('/configureroom/'));
     document.querySelector('#show-join-btn').addEventListener('click', () => document.querySelector('#join-section').classList.toggle('hidden'));
 
     document.querySelector('#join-form').addEventListener('submit', async (e) => {
@@ -144,8 +133,7 @@ if (path.includes('/createOrJoinRoom')) {
     });
 }
 
-// Ruta: Configurar els paràmetres de la nova sala
-if (path.includes('/configureRoom')) {
+if (path.includes('/configureroom')) {
     document.querySelector('#config-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const roomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -181,7 +169,6 @@ if (path.includes('/configureRoom')) {
     });
 }
 
-// Ruta: Sala d'espera (Lobby)
 if (path.includes('/room')) {
     const roomCode = local.get('roomCode');
     document.querySelector('#coderoom').textContent = roomCode;
@@ -195,7 +182,7 @@ if (path.includes('/room')) {
         if (rooms.length === 0) {
             alert('Aquesta sala ha estat eliminada.');
             local.clearAll();
-            window.location.replace('/createOrJoinRoom/');
+            window.location.replace('/createorjoinroom/');
             return;
         }
 
@@ -237,7 +224,6 @@ if (path.includes('/room')) {
     }
 }
 
-// Ruta: Joc en curs (Ronda)
 if (path.includes('/round')) {
     let currentRound = parseInt(local.get('currentRound'), 10) || 1;
     let totalRounds, roundTime, currentPartyId, currentRoundId, myUserId, myAnswer = null;
@@ -303,7 +289,7 @@ if (path.includes('/round')) {
         const answers = await fetchJSON(`${API_URL}/answers?round_id=eq.${currentRoundId}`);
         if (answers.length > 0 && totalUsers > 0 && answers.length === totalUsers) {
             clearInterval(roundInterval);
-            window.location.replace('/answersVotes/');
+            window.location.replace('/answersvotes/');
         }
     }
 
@@ -345,7 +331,7 @@ if (path.includes('/round')) {
             if (time <= 0) {
                 clearInterval(roundInterval);
                 await submitCurrentAnswer();
-                window.location.replace('/answersVotes/');
+                window.location.replace('/answersvotes/');
             }
         }, 1000);
     }
@@ -354,8 +340,7 @@ if (path.includes('/round')) {
     start();
 }
 
-// Ruta: Votació de les respostes
-if (path.includes('/answersVotes')) {
+if (path.includes('/answersvotes')) {
     let selectedAnswerId = null, voteTime = 30, myUserId = null, voteSubmitted = false;
     const currentRoundId = local.get('currentRoundId');
     let voteInterval = null;
@@ -446,7 +431,6 @@ if (path.includes('/answersVotes')) {
     init();
 }
 
-// Ruta: Classificació de la ronda actual
 if (path.includes('/ranking')) {
     let countdown = 5;
     const currentRound = parseInt(local.get('currentRound'), 10);
@@ -510,7 +494,6 @@ if (path.includes('/ranking')) {
     init();
 }
 
-// Ruta: Pòdi final de la partida
 if (path.includes('/podium')) {
     const roomCode = local.get('roomCode');
 
