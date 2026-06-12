@@ -36,7 +36,6 @@ services:
     image: postgrest/postgrest
     restart: unless-stopped
     environment:
-      # Sincronitzat de forma dinàmica amb l'usuari 'authenticator' i la seva contrasenya
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-postgres}
       PGRST_DB_SCHEMAS: "public, basic_auth"
       PGRST_DB_ANON_ROLE: anon
