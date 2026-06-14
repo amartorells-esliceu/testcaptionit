@@ -28,6 +28,7 @@ function broadcast(eventName, data) {
   const chunk = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const client of clients) {
     client.res.write(chunk);
+    if (typeof client.res.flush === 'function') client.res.flush();
   }
 }
 
@@ -46,9 +47,7 @@ async function createListenerClient() {
   });
 
   pg.on("notification", (msg) => {
-    if (msg.channel !== PG_CHANNEL) {
-      return;
-    }
+    if (msg.channel !== PG_CHANNEL) return;
 
     let payload;
     try {
@@ -60,7 +59,6 @@ async function createListenerClient() {
 
     const eventName = payload.table;
     console.log(`Canvi detectat a la taula: ${eventName}`);
-
     broadcast(eventName, payload);
   });
 
@@ -77,11 +75,7 @@ async function reconnect() {
   try {
     if (pgClient) {
       pgClient.removeAllListeners();
-      try {
-        await pgClient.end();
-      } catch {
-        /* ignore */
-      }
+      try { await pgClient.end(); } catch { /* ignore */ }
     }
     pgClient = await createListenerClient();
   } catch (err) {
@@ -96,10 +90,7 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
@@ -110,14 +101,18 @@ app.get("/events", (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
+  res.write(':' + ' '.repeat(2048) + '\n\n');
+  if (typeof res.flush === 'function') res.flush();
 
   const client = addClient(res);
   console.log(`client ${client.id} connected (total: ${clients.size})`);
 
   res.write(`event: connected\ndata: ${JSON.stringify({ clientId: client.id, clients: clients.size })}\n\n`);
+  if (typeof res.flush === 'function') res.flush();
 
   const keepalive = setInterval(() => {
     res.write(": keepalive\n\n");
+    if (typeof res.flush === 'function') res.flush();
   }, KEEPALIVE_INTERVAL_MS);
 
   req.on("close", () => {
@@ -133,10 +128,7 @@ app.get("/health", (req, res) => {
 
 app.post('/broadcast', (req, res) => {
   const { event, data } = req.body || {};
-  if (!event) {
-    return res.status(400).json({ error: 'missing event' });
-  }
-
+  if (!event) return res.status(400).json({ error: 'missing event' });
   try {
     broadcast(event, data || {});
     return res.json({ ok: true });
@@ -148,10 +140,7 @@ app.post('/broadcast', (req, res) => {
 
 app.post('/answers', async (req, res) => {
   const { content, round_id, user_id } = req.body || {};
-  if (!content || !round_id || !user_id) {
-    return res.status(400).json({ error: 'missing content, round_id or user_id' });
-  }
-
+  if (!content || !round_id || !user_id) return res.status(400).json({ error: 'missing content, round_id or user_id' });
   try {
     if (!writerClient) throw new Error('no writer DB client');
     const result = await writerClient.query(
@@ -167,10 +156,7 @@ app.post('/answers', async (req, res) => {
 
 app.post('/votes', async (req, res) => {
   const { answer_id, user_id } = req.body || {};
-  if (!answer_id || !user_id) {
-    return res.status(400).json({ error: 'missing answer_id or user_id' });
-  }
-
+  if (!answer_id || !user_id) return res.status(400).json({ error: 'missing answer_id or user_id' });
   try {
     if (!writerClient) throw new Error('no writer DB client');
     const result = await writerClient.query(
@@ -186,14 +172,9 @@ app.post('/votes', async (req, res) => {
 
 (async () => {
   await reconnect();
-  // create a separate client for performing queries (inserts/updates)
   try {
     writerClient = new Client({
-      host: PG_HOST,
-      port: PG_PORT,
-      database: PG_DB,
-      user: PG_USER,
-      password: PG_PASSWORD,
+      host: PG_HOST, port: PG_PORT, database: PG_DB, user: PG_USER, password: PG_PASSWORD,
     });
     await writerClient.connect();
     console.log('writer DB client connected');

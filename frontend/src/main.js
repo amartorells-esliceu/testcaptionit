@@ -11,7 +11,13 @@ export const BROADCAST_URL = import.meta.env.VITE_BROADCAST_URL || 'http://local
 let sseConnection = null;
 
 export const fetchJSON = async (url, options = {}) => {
-    const response = await fetch(url, options);
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            ...options.headers,
+            'ngrok-skip-browser-warning': '1'
+        }
+    });
     if (response.status === 204) return null;
     const text = await response.text();
     return text ? JSON.parse(text) : null;
