@@ -32,7 +32,7 @@ export const local = {
 
 export function getSSEConnection() {
     if (!sseConnection || sseConnection.readyState === EventSource.CLOSED) {
-        sseConnection = new EventSource(SSE_URL);
+        sseConnection = new EventSource(`${SSE_URL}?ngrok-skip-browser-warning=1`);
         sseConnection.onopen = () => console.log('SSE connected');
         sseConnection.onerror = () => console.warn('SSE error');
     }
