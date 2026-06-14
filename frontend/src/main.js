@@ -13,7 +13,8 @@ let sseConnection = null;
 export const fetchJSON = async (url, options = {}) => {
     const response = await fetch(url, options);
     if (response.status === 204) return null;
-    return await response.json();
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
 };
 
 export const local = {
